@@ -2,13 +2,18 @@ package org.jellyfin.androidtv.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.leanback.widget.BaseCardView
+import androidx.leanback.widget.Presenter
+import androidx.leanback.widget.Row
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
+import org.jellyfin.androidtv.ui.card.LegacyImageCardView
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
 import org.jellyfin.sdk.api.client.ApiClient
@@ -18,12 +23,6 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
-import androidx.leanback.widget.Row
-import androidx.leanback.widget.Presenter
-import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.constant.ImageType
-import org.jellyfin.androidtv.ui.card.LegacyImageCardView
-import androidx.leanback.widget.BaseCardView
 import timber.log.Timber
 
 class HomeFragmentSuggestedMoviesFragmentRow(
@@ -31,7 +30,7 @@ class HomeFragmentSuggestedMoviesFragmentRow(
     private val api: ApiClient
 ) : HomeFragmentRow {
 
-    private val noInfoCardPresenter = object : CardPresenter(false, ImageType.THUMB, 110) {
+    private val noInfoCardPresenter = object : CardPresenter(false, 150) {
         init {
             setHomeScreen(true)
             setUniformAspect(true)
@@ -65,7 +64,7 @@ class HomeFragmentSuggestedMoviesFragmentRow(
                     includeItemTypes = setOf(BaseItemKind.MOVIE),
                     sortOrder = setOf(SortOrder.DESCENDING,),
                     sortBy = setOf(ItemSortBy.DATE_PLAYED),
-                    limit = 2,
+                    limit = 1,
                     recursive = true,
                     fields = setOf(
                         ItemFields.PRIMARY_IMAGE_ASPECT_RATIO,
@@ -75,8 +74,6 @@ class HomeFragmentSuggestedMoviesFragmentRow(
                         ItemFields.MEDIA_SOURCES
                     )
                 )
-
-                Timber.d("Got recently played movies response: ${response.content.items.size} items")
 
                 withContext(Dispatchers.Main) {
                     for (item in response.content.items) {
@@ -89,7 +86,7 @@ class HomeFragmentSuggestedMoviesFragmentRow(
                                 ItemFields.MEDIA_STREAMS,
                                 ItemFields.MEDIA_SOURCES
                             ),
-                            limit = 2,
+                            limit = 7,
                         )
 
                         val rowDef = BrowseRowDef(

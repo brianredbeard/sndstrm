@@ -51,9 +51,6 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter
 import org.jellyfin.androidtv.util.KeyProcessor
-import org.jellyfin.androidtv.util.apiclient.getUrl
-import org.jellyfin.androidtv.util.apiclient.itemImages
-import org.jellyfin.androidtv.util.apiclient.parentImages
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.sockets.subscribe
@@ -83,8 +80,6 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	// Data
 	private var currentItem: BaseRowItem? = null
 	private var currentRow: ListRow? = null
-	private var justLoaded = true
-	// Special rows
 	private val notificationsRow by lazy { NotificationsHomeFragmentRow(lifecycleScope, notificationsRepository) }
 	private val nowPlaying by lazy { HomeFragmentNowPlayingRow(mediaManager) }
 	private val liveTVRow by lazy { HomeFragmentLiveTVRow(requireActivity(), userRepository, navigationRepository) }
@@ -107,16 +102,16 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 			// Start out with default sections
 			val homesections = listOf(
-    userSettingPreferences.get(userSettingPreferences.homesection0),
-    userSettingPreferences.get(userSettingPreferences.homesection1),
-    userSettingPreferences.get(userSettingPreferences.homesection2),
-    userSettingPreferences.get(userSettingPreferences.homesection3),
-    userSettingPreferences.get(userSettingPreferences.homesection4),
-    userSettingPreferences.get(userSettingPreferences.homesection5),
-    userSettingPreferences.get(userSettingPreferences.homesection6),
-    userSettingPreferences.get(userSettingPreferences.homesection7),
-    userSettingPreferences.get(userSettingPreferences.homesection8),
-    userSettingPreferences.get(userSettingPreferences.homesection9)
+				userSettingPreferences[userSettingPreferences.homesection0],
+				userSettingPreferences[userSettingPreferences.homesection1],
+				userSettingPreferences[userSettingPreferences.homesection2],
+				userSettingPreferences[userSettingPreferences.homesection3],
+				userSettingPreferences[userSettingPreferences.homesection4],
+				userSettingPreferences[userSettingPreferences.homesection5],
+				userSettingPreferences[userSettingPreferences.homesection6],
+				userSettingPreferences[userSettingPreferences.homesection7],
+				userSettingPreferences[userSettingPreferences.homesection8],
+				userSettingPreferences[userSettingPreferences.homesection9]
 )
 			var includeLiveTvRows = false
 
@@ -163,7 +158,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 						HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
 							listOf(liveTVRow, helper.loadOnNow())
 						} else {
-							emptyList<HomeFragmentRow>()
+							emptyList()
 						}
 						HomeSectionType.NONE -> null
 					}
@@ -177,8 +172,6 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 				}
 			}
 
-			val sectionLoadTime = System.currentTimeMillis() - startTime
-			Timber.d("Loaded ${rows.size} home sections in parallel in ${sectionLoadTime}ms")
 
 			// Add sections to layout
 			withContext(Dispatchers.Main) {
@@ -188,7 +181,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 				@Suppress("UNCHECKED_CAST")
 				val rowsAdapter = adapter as MutableObjectAdapter<Row>
-				val layoutStartTime = System.currentTimeMillis()
+				System.currentTimeMillis()
 
 				notificationsRow.addToRowsAdapter(requireContext(), cardPresenter, rowsAdapter)
 				nowPlaying.addToRowsAdapter(requireContext(), cardPresenter, rowsAdapter)
@@ -204,27 +197,8 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 						Timber.e(e, "Error adding row to adapter")
 					}
 				}
-                if (userSettingPreferences.get(userSettingPreferences.showMusicVideosRow)) {
-                    try {
-                        Timber.d("Adding Music Videos row")
-                        helper.loadMusicVideosRow().addToRowsAdapter(requireContext(), cardPresenter, rowsAdapter)
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error adding Music Videos row")
-                    }
-                }
-				if (genreManager.hasEnabledGenres()) {
-					val genreCount = genreManager.getEnabledGenreCount()
-					genreManager.loadGenreRows(cardPresenter, rowsAdapter)
-				} else {
-					Timber.d("No genre rows enabled")
-				}
-
-				val layoutTime = System.currentTimeMillis() - layoutStartTime
-				Timber.d("Home sections layout completed in ${layoutTime}ms")
+				genreManager.loadGenreRows(cardPresenter, rowsAdapter)
 			}
-
-			val totalLoadTime = System.currentTimeMillis() - startTime
-			Timber.d("HomeRowsFragment initialization completed in ${totalLoadTime}ms")
 		}
 
 		onItemViewClickedListener = CompositeClickedListener().apply {
@@ -254,7 +228,6 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 				api.webSocket.subscribe<LibraryChangedMessage>()
 				.onEach {
-					genreManager.refreshEnabledGenres()
 					refreshRows(force = true, delayed = false)
 				}
 				.launchIn(this)
@@ -272,30 +245,24 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 	override fun onResume() {
 		super.onResume()
-
 		//React to deletion
-		if (currentRow != null && currentItem != null && currentItem?.baseItem != null && currentItem!!.baseItem!!.id == dataRefreshService.lastDeletedItemId) {
+		if (currentRow != null && currentItem != null && currentItem!!.baseItem != null && currentItem!!.baseItem!!.id == dataRefreshService.lastDeletedItemId) {
 			(currentRow!!.adapter as ItemRowAdapter).remove(currentItem)
 			currentItem = null
 			dataRefreshService.lastDeletedItemId = null
 		}
 
-		if (!justLoaded) {
-			refreshCurrentItem()
-			refreshRows()
-			genreManager.clearEnabledGenresCache()
-		} else {
-			justLoaded = false
-			genreManager.preloadGenreConfigs()
-		}
+		refreshCurrentItem()
+		refreshRows()
+
 		// Ensure views are updated when fragment is resumed
 		ensureViewsInitialized()
 		// Update audio queue
 		Timber.i("Updating audio queue in HomeFragment (onResume)")
 		@Suppress("UNCHECKED_CAST")
 		(adapter as MutableObjectAdapter<Row>).let { mutableAdapter ->
-    nowPlaying.update(requireContext(), mutableAdapter)
-}
+			nowPlaying.update(requireContext(), mutableAdapter)
+		}
 	}
 
 	override fun onQueueStatusChanged(hasQueue: Boolean) {
@@ -346,17 +313,17 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	}
 
 	override fun onDestroyView() {
-        // Clear references to views to prevent leaks
-        titleView = null
-        infoRowView = null
-        summaryView = null
-        super.onDestroyView()
-    }
+		// Clear references to views to prevent leaks
+		titleView = null
+		infoRowView = null
+		summaryView = null
+		super.onDestroyView()
+	}
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaManager.removeAudioEventListener(this)
-    }
+	override fun onDestroy() {
+		super.onDestroy()
+		mediaManager.removeAudioEventListener(this)
+	}
 
 	private inner class ItemViewClickedListener : OnItemViewClickedListener {
 		override fun onItemClicked(
@@ -371,139 +338,144 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	}
 
 	private var titleView: android.widget.TextView? = null
-    private var infoRowView: android.widget.LinearLayout? = null
-    private var summaryView: android.widget.TextView? = null
-    private var logoView: org.jellyfin.androidtv.ui.AsyncImageView? = null
+	private var infoRowView: android.widget.LinearLayout? = null
+	private var summaryView: android.widget.TextView? = null
+	private var logoView: org.jellyfin.androidtv.ui.AsyncImageView? = null
 
-    private fun ensureViewsInitialized() {
-        // Always reinitialize the views when this is called
-        activity?.let { activity ->
-            titleView = activity.findViewById<android.widget.TextView>(R.id.title)
-            infoRowView = activity.findViewById<android.widget.LinearLayout>(R.id.infoRow)
-            summaryView = activity.findViewById<android.widget.TextView>(R.id.summary)
-            logoView = activity.findViewById<org.jellyfin.androidtv.ui.AsyncImageView>(R.id.logo)
+	private fun ensureViewsInitialized() {
+		// Always reinitialize the views when this is called
+		activity?.let { activity ->
+			titleView = activity.findViewById<android.widget.TextView>(R.id.title)
+			infoRowView = activity.findViewById<android.widget.LinearLayout>(R.id.infoRow)
+			summaryView = activity.findViewById<android.widget.TextView>(R.id.summary)
+			logoView = activity.findViewById<org.jellyfin.androidtv.ui.AsyncImageView>(R.id.logo)
 
-            // If we have a current item, update the views with its data
-            currentItem?.let { item ->
-                updateLogoAndTitle(item)
-                summaryView?.setText(item.getSummary(requireContext()) ?: "")
-                infoRowView?.removeAllViews()
-                infoRowView?.let { view ->
-                    org.jellyfin.androidtv.util.InfoLayoutHelper.addInfoRow(requireContext(), item.baseItem, view, true)
-                }
-            } ?: run {
-                // Clear the views if there's no current item
-                clearInfoPanel()
-            }
-        }
-    }
+			// If we have a current item, update the views with its data
+			currentItem?.let { item ->
+				updateLogoAndTitle(item)
+				summaryView?.setText(item.getSummary(requireContext()) ?: "")
+				infoRowView?.removeAllViews()
+				infoRowView?.let { view ->
+					org.jellyfin.androidtv.util.InfoLayoutHelper.addInfoRow(requireContext(), item.baseItem, view, true)
+				}
+			} ?: run {
+				// Clear the views if there's no current item
+				clearInfoPanel()
+			}
+		}
+	}
 
-    private fun updateLogoAndTitle(item: BaseRowItem) {
-        val baseItem = item.baseItem
-        val api: ApiClient by inject()
-        val imageHelper: org.jellyfin.androidtv.util.ImageHelper by inject()
-        val itemLogo = baseItem?.itemImages?.get(org.jellyfin.sdk.model.api.ImageType.LOGO)
-        val parentLogo = baseItem?.parentImages?.get(org.jellyfin.sdk.model.api.ImageType.LOGO)
-        val logoUrl = itemLogo?.getUrl(api) ?: parentLogo?.getUrl(api)
+	private fun updateLogoAndTitle(item: BaseRowItem) {
+		val baseItem = item.baseItem
+		val api: ApiClient by inject()
+		val imageHelper: org.jellyfin.androidtv.util.ImageHelper by inject()
+		val logoUrl = imageHelper.getLogoImageUrl(baseItem, maxWidth = 400)
 
-        if (logoUrl != null) {
-            // Show logo, hide title
-            logoView?.visibility = android.view.View.VISIBLE
-            titleView?.visibility = android.view.View.GONE
+		if (logoUrl != null) {
+			// Show logo, hide title
+			logoView?.visibility = android.view.View.VISIBLE
+			titleView?.visibility = android.view.View.GONE
 
-            logoView?.load(
-                url = logoUrl,
-                aspectRatio = 0.1
-            )
-        } else {
-            // Hide logo, show title
-            logoView?.visibility = android.view.View.GONE
-            titleView?.visibility = android.view.View.VISIBLE
-            titleView?.setText(item.getName(requireContext()))
-        }
-    }
+			logoView?.alpha = 0f
+
+			logoView?.load(
+				url = logoUrl,
+				aspectRatio = 0.1
+			)
+
+			logoView?.animate()
+				?.alpha(1f)
+				?.setDuration(400)
+				?.start()
+		} else {
+			// Hide logo, show title
+			logoView?.visibility = android.view.View.GONE
+			titleView?.visibility = android.view.View.VISIBLE
+			titleView?.setText(item.getName(requireContext()))
+		}
+	}
 
 
-    private fun clearInfoPanel(forceClear: Boolean = false) {
-        titleView?.setText("")
-        logoView?.visibility = android.view.View.GONE
-        titleView?.visibility = android.view.View.VISIBLE
-        infoRowView?.removeAllViews()
-        summaryView?.setText("")
+	private fun clearInfoPanel(forceClear: Boolean = false) {
+		titleView?.setText("")
+		logoView?.visibility = android.view.View.GONE
+		titleView?.visibility = android.view.View.VISIBLE
+		infoRowView?.removeAllViews()
+		summaryView?.setText("")
 
-        // Only clear backgrounds if we're not on a Media Folders item or if forced
-        if (forceClear || currentItem == null || !homeFragmentViewsRow.isMediaFoldersItem(currentItem)) {
-            backgroundService.clearBackgrounds()
-        }
-    }
+		// Only clear backgrounds if we're not on a Media Folders item or if forced
+		if (forceClear || currentItem == null || !homeFragmentViewsRow.isMediaFoldersItem(currentItem)) {
+			backgroundService.clearBackgrounds()
+		}
+	}
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        ensureViewsInitialized()
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
+		ensureViewsInitialized()
 
-        // Initialize any additional views here
-        initializeViews()
-    }
+		// Initialize any additional views here
+		initializeViews()
+	}
 
-    private fun initializeViews() {
-        // Any additional view initialization can go here
-    }
+	private fun initializeViews() {
+		// Any additional view initialization can go here
+	}
 
-private val homeFragmentViewsRow = HomeFragmentViewsRow(small = false)
+	private val homeFragmentViewsRow = HomeFragmentViewsRow(small = false)
 
-private inner class ItemViewSelectedListener : OnItemViewSelectedListener {
-    override fun onItemSelected(
-        itemViewHolder: Presenter.ViewHolder?,
-        item: Any?,
-        rowViewHolder: RowPresenter.ViewHolder?,
-        row: Row?,
-    ) {
-        ensureViewsInitialized()
+	private inner class ItemViewSelectedListener : OnItemViewSelectedListener {
+		override fun onItemSelected(
+			itemViewHolder: Presenter.ViewHolder?,
+			item: Any?,
+			rowViewHolder: RowPresenter.ViewHolder?,
+			row: Row?,
+		) {
+			ensureViewsInitialized()
 
-        // Check if the item is from the Media Folders row or has the media_folders_item tag
-        val isMediaFolderItem = homeFragmentViewsRow.isMediaFoldersItem(item) ||
-                              (item is BaseRowItem && itemViewHolder?.view?.tag == "media_folders_item")
+			// Check if the item is from the Media Folders row or has the media_folders_item tag
+			val isMediaFolderItem = homeFragmentViewsRow.isMediaFoldersItem(item) ||
+					(item is BaseRowItem && itemViewHolder?.view?.tag == "media_folders_item")
 
-        if (isMediaFolderItem) {
-            // For Media Folders items, clear the info panel but keep the background
-            titleView?.setText("")
-            logoView?.visibility = android.view.View.GONE
-            titleView?.visibility = android.view.View.VISIBLE
-            infoRowView?.removeAllViews()
-            summaryView?.setText("")
+			if (isMediaFolderItem) {
+				// For Media Folders items, clear the info panel but keep the background
+				titleView?.setText("")
+				logoView?.visibility = android.view.View.GONE
+				titleView?.visibility = android.view.View.VISIBLE
+				infoRowView?.removeAllViews()
+				summaryView?.setText("")
 
-            // Set the background using the Media Folder's primary image
-            if (item is BaseRowItem) {
-                currentItem = item
-                currentRow = row as? ListRow
-                backgroundService.setBackground(item.baseItem)
-            }
-            return
-        }
+				// Set the background using the Media Folder's primary image
+				if (item is BaseRowItem) {
+					currentItem = item
+					currentRow = row as? ListRow
+					backgroundService.setBackground(item.baseItem)
+				}
+				return
+			}
 
-        if (item !is BaseRowItem) {
-            currentItem = null
-            // Clear info panel and background
-            clearInfoPanel(true)
-        } else {
-            currentItem = item
-            currentRow = row as? ListRow
+			if (item !is BaseRowItem) {
+				currentItem = null
+				// Clear info panel and background
+				clearInfoPanel(true)
+			} else {
+				currentItem = item
+				currentRow = row as? ListRow
 
-            // Safely cast row to ListRow and get its adapter
-            (row as? ListRow)?.let { listRow ->
-                val itemRowAdapter = listRow.adapter as? ItemRowAdapter
-                itemRowAdapter?.loadMoreItemsIfNeeded(itemRowAdapter.indexOf(item))
-            }
+				// Safely cast row to ListRow and get its adapter
+				(row as? ListRow)?.let { listRow ->
+					val itemRowAdapter = listRow.adapter as? ItemRowAdapter
+					itemRowAdapter?.loadMoreItemsIfNeeded(itemRowAdapter.indexOf(item))
+				}
 
-            updateLogoAndTitle(item)
-            summaryView?.setText(item.getSummary(requireContext()) ?: "")
-            infoRowView?.removeAllViews()
-            infoRowView?.let { view ->
-                org.jellyfin.androidtv.util.InfoLayoutHelper.addInfoRow(requireContext(), item.baseItem, view, true)
-            }
+				updateLogoAndTitle(item)
+				summaryView?.setText(item.getSummary(requireContext()) ?: "")
+				infoRowView?.removeAllViews()
+				infoRowView?.let { view ->
+					org.jellyfin.androidtv.util.InfoLayoutHelper.addInfoRow(requireContext(), item.baseItem, view, true)
+				}
 
-            backgroundService.setBackground(item.baseItem)
-        }
-    }
-}
+				backgroundService.setBackground(item.baseItem)
+			}
+		}
+	}
 }

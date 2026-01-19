@@ -12,12 +12,14 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
+import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
 
 class HomeFragmentMusicVideosRow(
-    private val userRepository: UserRepository
+	private val userRepository: UserRepository,
+	api: ApiClient
 ) : HomeFragmentRow {
     override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
         val currentUserId = userRepository.currentUser.value?.id ?: return
@@ -48,8 +50,8 @@ class HomeFragmentMusicVideosRow(
 
                 // Set fixed dimensions for all cards in the row
                 (viewHolder.view as? org.jellyfin.androidtv.ui.card.LegacyImageCardView)?.let { cardView ->
-                    cardView.setMainImageDimensions(220, 128)
-                    cardView.cardType = BaseCardView.CARD_TYPE_INFO_UNDER
+                    cardView.setMainImageDimensions(200, 110)
+                    cardView.cardType = BaseCardView.CARD_TYPE_MAIN_ONLY
                 }
             }
         }

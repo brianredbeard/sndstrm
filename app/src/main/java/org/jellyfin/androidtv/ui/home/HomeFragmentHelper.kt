@@ -18,15 +18,11 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
 import org.jellyfin.sdk.model.api.request.GetNextUpRequest
 import org.jellyfin.sdk.model.api.request.GetRecommendedProgramsRequest
 import org.jellyfin.sdk.model.api.request.GetRecordingsRequest
 import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
-import org.jellyfin.sdk.model.api.SortOrder
-import org.jellyfin.androidtv.ui.home.HomeFragmentMusicVideosRow
 
 class HomeFragmentHelper(
     private val context: Context,
@@ -34,32 +30,11 @@ class HomeFragmentHelper(
     private val userPreferences: UserPreferences
 ) {
     companion object {
-        private const val ITEM_LIMIT = 40
         private const val ITEM_LIMIT_RESUME = 50
         private const val ITEM_LIMIT_RECORDINGS = 40
         private const val ITEM_LIMIT_NEXT_UP = 50
         private const val ITEM_LIMIT_ON_NOW = 20
     }
-
-    fun loadMusicRow(): HomeFragmentRow {
-		val currentUserId = userRepository.currentUser.value?.id
-        val musicPlaylistQuery = GetItemsRequest(
-            userId = currentUserId,
-            includeItemTypes = setOf(BaseItemKind.PLAYLIST),
-            mediaTypes = setOf(MediaType.AUDIO),
-            sortBy = setOf(ItemSortBy.SORT_NAME),
-            limit = ITEM_LIMIT,
-            fields = ItemRepository.itemFields,
-            recursive = true,
-            excludeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.EPISODE)
-        )
-        return HomeFragmentBrowseRowDefRow(BrowseRowDef(context.getString(R.string.lbl_music_playlists), musicPlaylistQuery, 50))
-    }
-
-    fun loadMusicVideosRow(): HomeFragmentRow {
-        return HomeFragmentMusicVideosRow(userRepository)
-    }
-
 
     fun loadRecentlyAdded(userViews: Collection<org.jellyfin.sdk.model.api.BaseItemDto>): HomeFragmentRow {
         return HomeFragmentLatestRow(userRepository, userViews)
@@ -236,23 +211,6 @@ class HomeFragmentHelper(
             }
         }
     }
-
-    // Helper function to create a row with no info card style
-    private fun createNoInfoRow(row: HomeFragmentRow): HomeFragmentRow {
-        return object : HomeFragmentRow {
-            override fun addToRowsAdapter(
-                context: Context,
-                cardPresenter: CardPresenter,
-                rowsAdapter: MutableObjectAdapter<Row>
-            ) {
-                val noInfoCardPresenter = CardPresenter(false, 140).apply {
-                    setHomeScreen(true)
-                    setUniformAspect(true)
-                }
-
-                row.addToRowsAdapter(context, noInfoCardPresenter, rowsAdapter)
-            }
-        }
-    }
 }
+
 

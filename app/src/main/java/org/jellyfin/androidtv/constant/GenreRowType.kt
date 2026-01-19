@@ -17,5 +17,7 @@ enum class GenreRowType(
 	RECENTLY_RELEASED("recentlyreleased", R.string.show_recently_released_row),
 	WATCH_IT_AGAIN("watchitagain", R.string.show_watch_it_again_row),
 	MUSIC("music", R.string.show_music_videos_row),
+	Episode("episodes", R.string.show_recently_episodes_row),
+
 	NONE("none", R.string.home_section_none),
 }

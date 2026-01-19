@@ -5,28 +5,27 @@ import androidx.leanback.widget.BaseCardView
 import androidx.leanback.widget.Presenter
 import androidx.leanback.widget.Row
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.constant.ChangeTriggerType
-import org.jellyfin.androidtv.constant.ImageType
+import org.jellyfin.androidtv.constant.GenreRowType
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
+import org.jellyfin.androidtv.ui.card.LegacyImageCardView
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
+import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
-import org.jellyfin.sdk.api.client.ApiClient
 import timber.log.Timber
 
-/**
- * Manages genre row loading and display for the home screen with optimized performance.
- * Features lazy loading, caching, and resource management.
- */
 class GenreManager(
 	private val context: Context,
 	private val userRepository: UserRepository,
@@ -34,309 +33,185 @@ class GenreManager(
 	private val userSettingPreferences: UserSettingPreferences,
 	private val api: ApiClient
 ) {
-
 	companion object {
-		private const val GENRE_ITEM_LIMIT = 10
-		private const val GENRE_CARD_HEIGHT = 140
-		private const val CACHE_EXPIRY_MS = 5 * 60 * 1000L // 5 minutes
+		private const val GENRE_CARD_HEIGHT = 150
+		private const val GENRE_CARD_THUMB = 200
 	}
-
 	data class GenreConfig(
 		val name: String,
 		val displayName: String,
-		val preference: org.jellyfin.preference.Preference<Boolean>,
+		val preference: org.jellyfin.preference.Preference<Boolean>?,
 		val loader: () -> HomeFragmentRow,
 		val isNullable: Boolean = false
 	)
-	data class CachedEnabledGenres(
-		val genres: List<GenreConfig>,
-		val timestamp: Long = System.currentTimeMillis()
-	) {
-		fun isExpired(): Boolean = System.currentTimeMillis() - timestamp > CACHE_EXPIRY_MS
-	}
 
-	// Performance optimization: Lazy-loaded genre configurations
 	private val genreConfigs by lazy {
 		listOf(
 			GenreConfig(
-				name = "SuggestedMovies",
-				displayName = "Suggested Movies",
-				preference = userSettingPreferences.showSuggestedMoviesRow,
-				loader = { createSuggestedMoviesRow() }
+				name = context.getString(R.string.show_collections_row),
+				displayName = context.getString(R.string.show_collections_row),
+				preference = null,
+				loader = ::createCollectionsRow
 			),
 			GenreConfig(
-				name = "Collections",
-				displayName = "Collections",
-				preference = userSettingPreferences.showCollectionsRow,
-				loader = { createCollectionsRow() }
+				name = context.getString(R.string.show_discover_movies_row),
+				displayName = context.getString(R.string.show_discover_movies_row),
+				preference = null,
+				loader = ::createDiscoverMoviesRow
 			),
 			GenreConfig(
-				name = "Sci-Fi & Fantasy",
-				displayName = "Sci-Fi & Fantasy",
-				preference = userSettingPreferences.showSciFiRow,
-				loader = { createGenreRow("Sci-Fi & Fantasy") }
+				name = context.getString(R.string.show_discover_series_row),
+				displayName = context.getString(R.string.show_discover_series_row),
+				preference = null,
+				loader = ::createDiscoverSeriesRow
 			),
 			GenreConfig(
-				name = "Comedy",
-				displayName = "Comedy",
-				preference = userSettingPreferences.showComedyRow,
-				loader = { createGenreRow("Comedy") }
+				name = context.getString(R.string.show_recently_released_row),
+				displayName = context.getString(R.string.show_recently_released_row),
+				preference = null,
+				loader = ::createRecentlyReleasedRow
 			),
 			GenreConfig(
-				name = "Romance",
-				displayName = "Romance",
-				preference = userSettingPreferences.showRomanceRow,
-				loader = { createGenreRow("Romance") }
+				name = context.getString(R.string.show_watch_it_again_row),
+				displayName =context.getString(R.string.show_watch_it_again_row),
+				preference = null,
+				loader = ::createWatchItAgainRow
 			),
 			GenreConfig(
-				name = "Animation",
-				displayName = "Animation",
-				preference = userSettingPreferences.showAnimationRow,
-				loader = { createGenreRow("Animation") }
+				name =  context.getString(R.string.show_music_videos_row),
+				displayName =  context.getString(R.string.show_music_videos_row),
+				preference = null,
+				loader = ::createMusicVideosRow
 			),
 			GenreConfig(
-				name = "Action",
-				displayName = "Action",
-				preference = userSettingPreferences.showActionRow,
-				loader = { createGenreRow("Action") }
+				name = context.getString(R.string.because_you_watched),
+				displayName = context.getString(R.string.because_you_watched),
+				preference = null,
+				loader = ::createSuggestedMoviesRow
 			),
 			GenreConfig(
-				name = "Action & Adventure",
-				displayName = "Action & Adventure",
-				preference = userSettingPreferences.showActionAdventureRow,
-				loader = { createGenreRow("Action & Adventure") }
-			),
-			GenreConfig(
-				name = "Documentary",
-				displayName = "Documentary",
-				preference = userSettingPreferences.showDocumentaryRow,
-				loader = { createGenreRow("Documentary") }
-			),
-			GenreConfig(
-				name = "Reality",
-				displayName = "Reality",
-				preference = userSettingPreferences.showRealityRow,
-				loader = { createGenreRow("Reality") },
-				isNullable = true
-			),
-			GenreConfig(
-				name = "Family",
-				displayName = "Family",
-				preference = userSettingPreferences.showFamilyRow,
-				loader = { createGenreRow("Family") }
-			),
-			GenreConfig(
-				name = "Horror",
-				displayName = "Horror",
-				preference = userSettingPreferences.showHorrorRow,
-				loader = { createGenreRow("Horror") }
-			),
-			GenreConfig(
-				name = "Fantasy",
-				displayName = "Fantasy",
-				preference = userSettingPreferences.showFantasyRow,
-				loader = { createGenreRow("Fantasy") }
-			),
-			GenreConfig(
-				name = "History",
-				displayName = "History",
-				preference = userSettingPreferences.showHistoryRow,
-				loader = { createGenreRow("History") }
-			),
-			GenreConfig(
-				name = "Music",
-				displayName = "Music",
-				preference = userSettingPreferences.showMusicRow,
-				loader = { createMusicRow() }
-			),
-			GenreConfig(
-				name = "Mystery",
-				displayName = "Mystery",
-				preference = userSettingPreferences.showMysteryRow,
-				loader = { createGenreRow("Mystery") }
-			),
-			GenreConfig(
-				name = "Thriller",
-				displayName = "Thriller",
-				preference = userSettingPreferences.showThrillerRow,
-				loader = { createGenreRow("Thriller") }
-			),
-			GenreConfig(
-				name = "War",
-				displayName = "War",
-				preference = userSettingPreferences.showWarRow,
-				loader = { createGenreRow("War") }
+				name = context.getString(R.string.show_recently_episodes_row),
+				displayName = context.getString(R.string.show_recently_episodes_row),
+				preference = null,
+				loader = ::createEpisodeRow
+
 			)
 		)
 	}
 
-	// Cache for enabled genres to avoid repeated preference access
-	private var cachedEnabledGenres: CachedEnabledGenres? = null
-
 	fun getEnabledGenres(): List<GenreConfig> {
-		// Performance optimization: Use cache if valid
-		val cached = cachedEnabledGenres
-		return if (cached != null && !cached.isExpired()) {
-			Timber.d("Using cached enabled genres (${cached.genres.size} genres)")
-			cached.genres
-		} else {
-			Timber.d("Computing enabled genres")
-			val enabled = genreConfigs.filter { config ->
-				userSettingPreferences[config.preference]
-			}
-			cachedEnabledGenres = CachedEnabledGenres(enabled)
-			Timber.d("Found ${enabled.size} enabled genres")
-			enabled
-		}
+		return computeEnabledGenresFromSlots()
 	}
 
-	fun clearEnabledGenresCache() {
-		cachedEnabledGenres = null
-		Timber.d("Cleared enabled genres cache")
+	private fun computeEnabledGenresFromSlots(): List<GenreConfig> {
+
+		val genreSlots = listOf(
+			userSettingPreferences.genrerow0,
+			userSettingPreferences.genrerow1,
+			userSettingPreferences.genrerow2,
+			userSettingPreferences.genrerow3,
+			userSettingPreferences.genrerow4,
+			userSettingPreferences.genrerow5,
+			userSettingPreferences.genrerow6,
+			userSettingPreferences.genrerow7,
+			userSettingPreferences.genrerow8,
+			userSettingPreferences.genrerow9
+		)
+
+		val addedGenres = mutableSetOf<String>()
+		val enabledGenres = mutableListOf<GenreConfig>()
+
+		for ((index, slotPref) in genreSlots.withIndex()) {
+			val slotValue = userSettingPreferences[slotPref]
+
+			if (slotValue == GenreRowType.NONE) {
+				continue
+			}
+			val config = when (slotValue) {
+				GenreRowType.SUGGESTED_MOVIES -> genreConfigs.find { it.name == context.getString(R.string.because_you_watched) }
+				GenreRowType.COLLECTIONS -> genreConfigs.find { it.name == context.getString(R.string.show_collections_row) }
+				GenreRowType.DISCOVER_MOVIES -> genreConfigs.find { it.name == context.getString(R.string.show_discover_movies_row) }
+				GenreRowType.DISCOVER_SERIES -> genreConfigs.find { it.name == context.getString(R.string.show_discover_series_row) }
+				GenreRowType.RECENTLY_RELEASED -> genreConfigs.find { it.name == context.getString(R.string.show_recently_released_row) }
+				GenreRowType.WATCH_IT_AGAIN -> genreConfigs.find { it.name == context.getString(R.string.show_watch_it_again_row) }
+				GenreRowType.MUSIC -> genreConfigs.find { it.name == context.getString(R.string.show_music_videos_row) }
+				GenreRowType.Episode -> genreConfigs.find { it.name == context.getString(R.string.show_recently_episodes_row) }
+				else -> null
+			}
+
+			if (config != null && !addedGenres.contains(config.name)) {
+				enabledGenres.add(config)
+				addedGenres.add(config.name)
+			}
+		}
+
+		return enabledGenres
 	}
+
 
 	suspend fun loadGenreRows(
 		cardPresenter: CardPresenter,
 		rowsAdapter: MutableObjectAdapter<Row>
 	) = withContext(Dispatchers.IO) {
 		val startTime = System.currentTimeMillis()
+
 		try {
 			val enabledGenres = getEnabledGenres()
-			Timber.d("Loading ${enabledGenres.size} enabled genre rows")
 
 			if (enabledGenres.isEmpty()) {
-				Timber.d("No genre rows enabled")
 				return@withContext
 			}
 
-			enabledGenres.forEach { config ->
-				try {
-					loadSingleGenreRow(config, cardPresenter, rowsAdapter)
-				} catch (e: Exception) {
-					Timber.e(e, "Error loading genre row: ${config.displayName}")
+			val genreRowResults = enabledGenres.map { config ->
+				async(Dispatchers.IO) {
+					try {
+						val row = config.loader()
+						Pair(config, row)
+					} catch (e: Exception) {
+						Timber.e(e, "Error loading genre row: ${config.displayName}")
+						Pair(config, null)
+					}
+				}
+			}.awaitAll()
+
+			withContext(Dispatchers.Main) {
+				genreRowResults.forEach { (config, row) ->
+					try {
+						if (config.isNullable && row == null) {
+						} else {
+							row?.addToRowsAdapter(context, cardPresenter, rowsAdapter)
+						}
+					} catch (e: Exception) {
+						Timber.e(e, "Error adding genre row to adapter: ${config.displayName}")
+					}
 				}
 			}
 
 			val loadTime = System.currentTimeMillis() - startTime
-			Timber.d("Successfully loaded ${enabledGenres.size} genre rows in ${loadTime}ms")
 		} catch (e: Exception) {
 			Timber.e(e, "Error loading genre rows")
 		}
 	}
 
-	private suspend fun loadSingleGenreRow(
-		config: GenreConfig,
-		cardPresenter: CardPresenter,
-		rowsAdapter: MutableObjectAdapter<Row>
-	) {
-		val rowStartTime = System.currentTimeMillis()
-		try {
-			Timber.d("Loading ${config.displayName} row")
-
-			val row = config.loader()
-
-			if (config.isNullable && row == null) {
-				Timber.d("No matching ${config.displayName} genre found in library")
-				return
-			}
-
-			withContext(Dispatchers.Main) {
-				row.addToRowsAdapter(context, cardPresenter, rowsAdapter)
-			}
-
-			val rowLoadTime = System.currentTimeMillis() - rowStartTime
-			Timber.d("Successfully added ${config.displayName} row in ${rowLoadTime}ms")
-
-		} catch (e: Exception) {
-			Timber.e(e, "Error loading ${config.displayName} row")
-		}
+	private fun createSuggestedMoviesRow(): HomeFragmentRow {
+		return HomeFragmentSuggestedMoviesFragmentRow(userRepository, api)
 	}
 
-	private fun createGenreRow(genreName: String): HomeFragmentRow {
-		val query = GetItemsRequest(
-			userId = userRepository.currentUser.value?.id,
-			includeItemTypes = listOf(
-				BaseItemKind.MOVIE,
-				BaseItemKind.SERIES,
-				BaseItemKind.MUSIC_ALBUM,
-				BaseItemKind.MUSIC_ARTIST,
-				BaseItemKind.MUSIC_VIDEO
-			),
-			excludeItemTypes = listOf(BaseItemKind.EPISODE),
-			genres = listOf(genreName),
-			sortBy = listOf(userPreferences[UserPreferences.genreSortBy].itemSortBy),
-			sortOrder = listOf(SortOrder.DESCENDING),
-			limit = GENRE_ITEM_LIMIT,
-			recursive = true,
-			fields = ItemRepository.itemFields,
-			imageTypeLimit = 1,
-			enableTotalRecordCount = false
-		)
-
-		return object : HomeFragmentRow {
-			override fun addToRowsAdapter(
-				context: Context,
-				cardPresenter: CardPresenter,
-				rowsAdapter: MutableObjectAdapter<Row>
-			) {
-				val noInfoCardPresenter = CardPresenter(false, GENRE_CARD_HEIGHT).apply {
-					setHomeScreen(true)
-					setUniformAspect(true)
-				}
-
-				HomeFragmentBrowseRowDefRow(BrowseRowDef(genreName, query, GENRE_ITEM_LIMIT, false, true))
-					.addToRowsAdapter(context, noInfoCardPresenter, rowsAdapter)
-			}
-		}
+	private fun createMusicVideosRow(): HomeFragmentRow {
+		return HomeFragmentMusicVideosRow(userRepository, api)
 	}
 
-	/**
-	 * special music row for playlists
-	 */
-	private fun createMusicRow(): HomeFragmentRow {
-		val currentUserId = userRepository.currentUser.value?.id
-		val musicPlaylistQuery = GetItemsRequest(
-			userId = currentUserId,
-			includeItemTypes = setOf(BaseItemKind.PLAYLIST),
-			mediaTypes = setOf(MediaType.AUDIO),
-			sortBy = listOf(userPreferences[UserPreferences.genreSortBy].itemSortBy),
-			limit = GENRE_ITEM_LIMIT,
-			fields = ItemRepository.itemFields,
-			recursive = true,
-			excludeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.EPISODE)
-		)
-
-		return object : HomeFragmentRow {
-			override fun addToRowsAdapter(
-				context: Context,
-				cardPresenter: CardPresenter,
-				rowsAdapter: MutableObjectAdapter<Row>
-			) {
-				val noInfoCardPresenter = CardPresenter(false, GENRE_CARD_HEIGHT).apply {
-					setHomeScreen(true)
-					setUniformAspect(true)
-				}
-
-				HomeFragmentBrowseRowDefRow(BrowseRowDef("Music Playlists", musicPlaylistQuery, GENRE_ITEM_LIMIT, false, true))
-					.addToRowsAdapter(context, noInfoCardPresenter, rowsAdapter)
-			}
-		}
-	}
-
-	/**
-	 * Creates a Collections row with thumbnail images and same card size as Music Videos row
-	 */
 	private fun createCollectionsRow(): HomeFragmentRow {
-		val currentUserId = userRepository.currentUser.value?.id
-			?: throw IllegalStateException("User not available")
+		val currentUserId = requireNotNull(userRepository.currentUser.value?.id) {
+			"User not available"
+		}
 
-		// Create a query to get collections
 		val query = GetItemsRequest(
 			userId = currentUserId,
 			includeItemTypes = listOf(BaseItemKind.BOX_SET),
 			sortBy = setOf(ItemSortBy.DATE_CREATED),
 			sortOrder = listOf(SortOrder.DESCENDING),
-			limit = GENRE_ITEM_LIMIT,
+			limit = getGenreItemLimit(),
 			recursive = true,
 			imageTypeLimit = 1,
 			enableTotalRecordCount = false,
@@ -350,82 +225,262 @@ class GenreManager(
 				cardPresenter: CardPresenter,
 				rowsAdapter: MutableObjectAdapter<Row>
 			) {
-				// Create a card presenter for collections with thumbnail images and specific dimensions to match Music Videos row
-				val collectionsCardPresenter = CardPresenter(false, GENRE_CARD_HEIGHT).apply {
-						setHomeScreen(true)
-						setUniformAspect(true)
-					}
-				// Create the row definition with chunk size and change triggers
+				val collectionsCardPresenter = createUniformCardPresenter()
 				val rowDef = BrowseRowDef(
-					"Collections",
+					context.getString(R.string.show_collections_row),
 					query,
-					15, // chunkSize
-					false, // preferParentThumb
-					true, // staticHeight
-					arrayOf(ChangeTriggerType.LibraryUpdated)
+					getGenreItemLimit()
 				)
 
-				// Add the row to the adapter
-				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(context, collectionsCardPresenter, rowsAdapter)
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					collectionsCardPresenter,
+					rowsAdapter
+				)
 			}
 		}
 	}
-	private fun createSuggestedMoviesRow(): HomeFragmentRow {
-		return HomeFragmentSuggestedMoviesFragmentRow(userRepository, api)
-	}
 
-	fun hasEnabledGenres(): Boolean {
-		return genreConfigs.any { config ->
-			userSettingPreferences[config.preference]
+	private fun createDiscoverMoviesRow(): HomeFragmentRow {
+		val currentUserId = requireNotNull(userRepository.currentUser.value?.id) {
+			"User not available"
 		}
-	}
 
-	fun getEnabledGenreCount(): Int {
-		return getEnabledGenres().size
-	}
-
-	fun toggleGenreRow(genreName: String, enabled: Boolean) {
-		val config = genreConfigs.find { it.name == genreName }
-		if (config != null) {
-			userSettingPreferences[config.preference] = enabled
-			clearEnabledGenresCache() // Clear cache when preferences change
-			Timber.d("Toggled genre '$genreName' to $enabled")
-		} else {
-			Timber.w("Genre '$genreName' not found in configurations")
-		}
-	}
-
-	fun getAllGenreConfigs(): List<GenreConfig> {
-		return genreConfigs.toList()
-	}
-
-	fun preloadGenreConfigs() {
-		val configs = genreConfigs
-		Timber.d("Preloaded ${configs.size} genre configurations")
-	}
-
-	fun isGenreEnabled(genreName: String): Boolean {
-		val config = genreConfigs.find { it.name == genreName }
-		return config?.let { userSettingPreferences[it.preference] } ?: false
-	}
-
-	fun getCacheStats(): Map<String, Any> {
-		val cached = cachedEnabledGenres
-		return mapOf(
-			"has_cached_genres" to (cached != null),
-			"cache_expired" to (cached?.isExpired() ?: true),
-			"cached_genre_count" to (cached?.genres?.size ?: 0),
-			"total_genre_configs" to genreConfigs.size,
-			"cache_expiry_ms" to CACHE_EXPIRY_MS
+		val discoverMoviesQuery = GetItemsRequest(
+			userId = currentUserId,
+			includeItemTypes = listOf(BaseItemKind.MOVIE),
+			sortBy = setOf(ItemSortBy.RANDOM),
+			filters = setOf(ItemFilter.IS_UNPLAYED),
+			sortOrder = listOf(SortOrder.DESCENDING),
+			limit = getGenreItemLimit(),
+			recursive = true,
+			imageTypeLimit = 1,
+			enableTotalRecordCount = false,
+			fields = ItemRepository.itemFields,
+			enableImages = true
 		)
+
+		return object : HomeFragmentRow {
+			override fun addToRowsAdapter(
+				context: Context,
+				cardPresenter: CardPresenter,
+				rowsAdapter: MutableObjectAdapter<Row>
+			) {
+				val discoverMoviesCardPresenter = createUniformCardPresenter()
+				val rowDef = BrowseRowDef(
+					context.getString(R.string.show_discover_movies_row),
+					discoverMoviesQuery,
+					getGenreItemLimit()
+				)
+
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					discoverMoviesCardPresenter,
+					rowsAdapter
+				)
+			}
+		}
 	}
 
-	/**
-	 * Force refresh of enabled genres cache
-	 */
-	fun refreshEnabledGenres() {
-		clearEnabledGenresCache()
-		getEnabledGenres() // This will recreate the cache
-		Timber.d("Refreshed enabled genres cache")
+	private fun createDiscoverSeriesRow(): HomeFragmentRow {
+		val currentUserId = requireNotNull(userRepository.currentUser.value?.id) {
+			"User not available"
+		}
+
+		val discoverSeriesQuery = GetItemsRequest(
+			userId = currentUserId,
+			includeItemTypes = listOf(BaseItemKind.SERIES),
+			sortBy = setOf(ItemSortBy.RANDOM),
+			sortOrder = listOf(SortOrder.DESCENDING),
+			limit = getGenreItemLimit(),
+			recursive = true,
+			imageTypeLimit = 1,
+			enableTotalRecordCount = false,
+			fields = ItemRepository.itemFields,
+			enableImages = true
+		)
+
+		return object : HomeFragmentRow {
+			override fun addToRowsAdapter(
+				context: Context,
+				cardPresenter: CardPresenter,
+				rowsAdapter: MutableObjectAdapter<Row>
+			) {
+				val discoverSeriesCardPresenter = createUniformCardPresenter()
+				val rowDef = BrowseRowDef(
+					context.getString(R.string.show_discover_series_row),
+					discoverSeriesQuery,
+					getGenreItemLimit()
+				)
+
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					discoverSeriesCardPresenter,
+					rowsAdapter
+				)
+			}
+		}
+	}
+
+	private fun createRecentlyReleasedRow(): HomeFragmentRow {
+		val currentUserId = requireNotNull(userRepository.currentUser.value?.id) {
+			"User not available"
+		}
+
+		val recentlyReleasedQuery = GetItemsRequest(
+			userId = currentUserId,
+			includeItemTypes = listOf(BaseItemKind.MOVIE),
+			sortBy = listOf(ItemSortBy.PREMIERE_DATE),
+			sortOrder = listOf(SortOrder.DESCENDING),
+			filters = setOf(ItemFilter.IS_UNPLAYED),
+			limit = getGenreItemLimit(),
+			recursive = true,
+			imageTypeLimit = 1,
+			enableTotalRecordCount = false,
+			fields = ItemRepository.itemFields,
+			enableImages = true
+		)
+
+		return object : HomeFragmentRow {
+			override fun addToRowsAdapter(
+				context: Context,
+				cardPresenter: CardPresenter,
+				rowsAdapter: MutableObjectAdapter<Row>
+			) {
+				val recentlyReleasedCardPresenter = createUniformCardPresenter()
+				val rowDef = BrowseRowDef(
+					context.getString(R.string.show_recently_released_row),
+					recentlyReleasedQuery,
+					getGenreItemLimit()
+				)
+
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					recentlyReleasedCardPresenter,
+					rowsAdapter
+				)
+			}
+		}
+	}
+
+	private fun createWatchItAgainRow(): HomeFragmentRow {
+		val currentUserId = requireNotNull(userRepository.currentUser.value?.id) {
+			"User not available"
+		}
+
+		val watchItAgainQuery = GetItemsRequest(
+			userId = currentUserId,
+			includeItemTypes = listOf(BaseItemKind.MOVIE),
+			filters = setOf(ItemFilter.IS_PLAYED),
+			sortBy = setOf(ItemSortBy.DATE_CREATED),
+			sortOrder = listOf(SortOrder.DESCENDING),
+			limit = getGenreItemLimit(),
+			recursive = true,
+			imageTypeLimit = 1,
+			enableTotalRecordCount = false,
+			fields = ItemRepository.itemFields,
+			enableImages = true
+		)
+
+		return object : HomeFragmentRow {
+			override fun addToRowsAdapter(
+				context: Context,
+				cardPresenter: CardPresenter,
+				rowsAdapter: MutableObjectAdapter<Row>
+			) {
+				val watchItAgainCardPresenter = createUniformCardPresenter()
+				val rowDef = BrowseRowDef(
+					context.getString(R.string.show_watch_it_again_row),
+					watchItAgainQuery,
+					getGenreItemLimit()
+				)
+
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					watchItAgainCardPresenter,
+					rowsAdapter
+				)
+			}
+		}
+	}
+
+	private fun createEpisodeRow(): HomeFragmentRow {
+		val currentUserId = userRepository.currentUser.value?.id
+
+		val episodeQuery = GetItemsRequest(
+			fields = ItemRepository.itemFields,
+			includeItemTypes = setOf(BaseItemKind.EPISODE),
+			filters = setOf(ItemFilter.IS_UNPLAYED),
+			indexNumber = 1,
+			recursive = true,
+			isMissing = false,
+			imageTypeLimit = 1,
+			sortBy = setOf(ItemSortBy.PREMIERE_DATE),
+			sortOrder = setOf(SortOrder.DESCENDING),
+			enableTotalRecordCount = false,
+			limit = getGenreItemLimit(),
+		)
+
+		return object : HomeFragmentRow {
+			override fun addToRowsAdapter(
+				context: Context,
+				cardPresenter: CardPresenter,
+				rowsAdapter: MutableObjectAdapter<Row>
+			) {
+				val useSeriesThumbnails = userPreferences[UserPreferences.seriesThumbnailsEnabled]
+				val episodeCardPresenter = createthumbcardpresenter()
+				val rowDef = BrowseRowDef(
+					context.getString(R.string.show_recently_episodes_row),
+					episodeQuery,
+					getGenreItemLimit(),
+					useSeriesThumbnails,  // Pass the preference here
+					false
+				)
+
+				HomeFragmentBrowseRowDefRow(rowDef).addToRowsAdapter(
+					context,
+					episodeCardPresenter,
+					rowsAdapter
+				)
+			}
+		}
+	}
+
+	private fun createUniformCardPresenter(): CardPresenter {
+		return object : CardPresenter(false, GENRE_CARD_HEIGHT) {
+			init {
+				setHomeScreen(true)
+				setUniformAspect(true)
+			}
+
+			override fun onBindViewHolder(viewHolder: Presenter.ViewHolder, item: Any?) {
+				super.onBindViewHolder(viewHolder, item)
+
+				(viewHolder.view as? LegacyImageCardView)?.let { cardView ->
+					cardView.cardType = BaseCardView.CARD_TYPE_MAIN_ONLY
+				}
+			}
+		}
+	}
+	private fun createthumbcardpresenter(): CardPresenter {
+		return object : CardPresenter(false, GENRE_CARD_THUMB) {
+			init {
+				setHomeScreen(true)
+				setUniformAspect(true)
+			}
+
+			override fun onBindViewHolder(viewHolder: Presenter.ViewHolder, item: Any?) {
+				super.onBindViewHolder(viewHolder, item)
+
+				(viewHolder.view as? LegacyImageCardView)?.let { cardView ->
+					cardView.setMainImageDimensions(200, 110)
+					cardView.cardType = BaseCardView.CARD_TYPE_MAIN_ONLY
+				}
+			}
+		}
+	}
+	private fun getGenreItemLimit(): Int {
+		return userPreferences[UserPreferences.genreItemLimit]
 	}
 }
+

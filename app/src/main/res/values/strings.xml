@@ -78,11 +78,13 @@
     <string name="show_my_collections_row">Collections row</string>
     <string name="show_collections_row">Collections</string>
     <string name="show_suggested_movies_row">Because you watched</string>
+    <string name="show_recently_episodes_row">Recently aired</string>
     <string name="show_discover_movies_row">Discover Movies</string>
     <string name="show_discover_series_row">Discover Series</string>
     <string name="show_recently_released_row">Recently Released</string>
     <string name="show_watch_it_again_row">Watch It Again</string>
     <string name="show_music_videos_row">Music Videos</string>
+    <string name="show_music_videoss_row">Music Videos</string>
     <string name="show_live_tv_button">Live TV Button</string>
     <string name="show_live_tv_button_summary">Display the Live TV button </string>
     <string name="show_random_button">Random Movie Button</string>
