@@ -29,7 +29,7 @@ interface ContentSource {
 
     fun getHome(): Flow<List<ContentRow>>
     fun search(query: String): Flow<List<ContentItem>>
-    suspend fun getItem(id: String): ContentItem?
+    suspend fun getItem(sourceItemId: String): ContentItem?  // source-local ID, not canonicalId
     fun getStreamSources(item: ContentItem): List<StreamSource>
 }
 ```
@@ -75,7 +75,7 @@ One playable version of a content item:
 - `canDirectPlay: Boolean` (computed against device capabilities)
 - `isLive: Boolean`
 
-The combination of `sourceRef.sourceId + mediaSourceId + streamIndex` forms the stable Jellyfin cache key used in Section 6 (`{serverId}:{itemId}:{mediaSourceId}:{streamIndex}`), where `serverId` and `itemId` come from the `SourceRef`.
+The stable Jellyfin cache key is `{sourceRef.sourceId}:{sourceRef.itemId}:{mediaSourceId}:{streamIndex}`. All four components are required — omitting `itemId` would cause cross-item collisions within the same server.
 
 ### PlayableResolver
 
@@ -340,9 +340,16 @@ CREATE TABLE watch_state (
     last_played INTEGER,         -- epoch millis
     PRIMARY KEY (canonical_id, source_id)
 );
+
+CREATE TABLE canonical_id_aliases (
+    alias_id TEXT NOT NULL PRIMARY KEY,  -- previous canonical ID (e.g., "imdb:movie:tt0063350")
+    canonical_id TEXT NOT NULL           -- current canonical ID (e.g., "tmdb:movie:10331")
+);
 ```
 
 Empty string `source_id` represents the unified/merged row. Non-empty values represent source-specific state.
+
+**Canonical ID stability:** When provider-set merging causes a canonical ID to change (e.g., an item was first seen with only IMDb, then a new source adds TMDb), the old canonical ID is inserted into `canonical_id_aliases` and the `watch_state` row is migrated to the new canonical ID. Watch state lookups check aliases: `SELECT * FROM watch_state WHERE canonical_id = ? OR canonical_id IN (SELECT alias_id FROM canonical_id_aliases WHERE canonical_id = ?)`. This prevents orphaned progress rows when the provider set grows.
 
 **Key design decisions:**
 - Keyed by `canonical_id` (provider-derived) for cross-source unification
