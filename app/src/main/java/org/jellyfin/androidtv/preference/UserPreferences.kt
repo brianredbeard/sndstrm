@@ -114,6 +114,14 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 
 		var hardwareAccelerationEnabled = booleanPreference("hardware_acceleration_enabled", defaultValue = true)
 
+		/* Theme Songs */
+		var themeSongsEnabled = booleanPreference("theme_songs_enabled", false)
+		var themeSongsVolume = intPreference("theme_songs_volume", 10)
+		var themeSongsMovies = booleanPreference("theme_songs_movies", true)
+		var themeSongsSeries = booleanPreference("theme_songs_series", true)
+		var themeSongsEpisodes = booleanPreference("theme_songs_episodes", false)
+		var themeSongsArchiveFallback = booleanPreference("theme_songs_archive_fallback", true)
+
 		/* Playback - Audio related */
 		/**
 		 * Preferred behavior for audio streaming.
