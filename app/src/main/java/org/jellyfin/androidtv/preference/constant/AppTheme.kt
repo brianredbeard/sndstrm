@@ -9,18 +9,12 @@ import org.jellyfin.preference.PreferenceEnum
 enum class AppTheme(
 	override val nameRes: Int,
 ) : PreferenceEnum {
-	/**
-	 * The default dark theme
-	 */
+	PURPLE_HAZE(R.string.pref_theme_purple_haze),
 	DARK(R.string.pref_theme_dark),
-
-	/**
-	 * The "classic" emerald theme
-	 */
 	EMERALD(R.string.pref_theme_emerald),
-
-	/**
-	 * A theme with a more muted accent color, inspired by CTalvio's Monochromic CSS theme for Jellyfin Web
-	 */
 	MUTED_PURPLE(R.string.pref_theme_muted_purple),
+	BASIC(R.string.pref_theme_basic),
+	FLEXY(R.string.pref_theme_flexy),
+	YELLOW_TOWN(R.string.pref_theme_yellow_town),
+	DARK_PURPLE(R.string.pref_theme_dark_purple),
 }
