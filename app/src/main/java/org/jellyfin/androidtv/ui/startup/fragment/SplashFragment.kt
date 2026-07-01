@@ -45,9 +45,9 @@ fun SplashScreen() {
 			modifier = Modifier.fillMaxSize(),
 		) {
 			Image(
-				painter = painterResource(R.drawable.sndstrm_logo),
+				painter = painterResource(R.drawable.sndstrm_splash),
 				contentDescription = stringResource(R.string.app_name),
-				modifier = Modifier.size(120.dp),
+				modifier = Modifier.size(140.dp),
 			)
 
 			Spacer(modifier = Modifier.height(24.dp))
