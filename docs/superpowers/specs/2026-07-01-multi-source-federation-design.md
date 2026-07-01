@@ -38,15 +38,27 @@ interface ContentSource {
 
 Unified data class wrapping either a Jellyfin `BaseItemDto` or a feed item:
 
-- `canonicalId: String` — stable ID for deduped items, namespaced by content type and provider. Format: `{provider}:{type}:{id}` (e.g., `tmdb:movie:10331`, `tmdb:tv:1396`, `imdb:movie:tt0063350`). For providerless items: `{sourceId}:{itemId}`. TMDb movie and TV ID spaces are separate — the type namespace prevents collisions.
+- `canonicalId: String` — stable ID for deduped items, namespaced by content type and provider. Format: `{provider}:{type}:{id}` (e.g., `tmdb:movie:10331`, `tmdb:tv:1396`, `imdb:movie:tt0063350`). For episodes with their own provider ID: `tmdb:episode:62085`. For episodes without: `tmdb:tv:1396:S02E05`. For providerless items: `{sourceId}:{itemId}`. TMDb movie and TV ID spaces are separate — the type namespace prevents collisions.
 - `title: String`
 - `year: Int?`
 - `overview: String?`
 - `type: ContentType` (MOVIE, SERIES, EPISODE, LIVE, ANNOUNCEMENT)
 - `images: ContentImages` (poster, backdrop, logo)
-- `providerIds: Map<String, String>` (tmdb, imdb, tvdb)
+- `providerIds: Map<String, String>` (tmdb, imdb, tvdb — item-level IDs)
+- `episodeInfo: EpisodeInfo?` — non-null only when `type == EPISODE`
 - `sourceRefs: List<SourceRef>` — one entry per source that has this item
 - `streams: List<StreamSource>` — aggregated from all sourceRefs
+
+### EpisodeInfo
+
+Episode-specific metadata for canonical ID derivation and display:
+
+- `seasonNumber: Int?` (null for specials without a season)
+- `episodeNumber: Int?`
+- `seriesProviderIds: Map<String, String>` (tmdb, imdb, tvdb — series-level IDs, used when the episode itself lacks a provider ID)
+- `seriesTitle: String?`
+
+The `canonicalId` for an episode is built as: episode's own provider ID if available (`tmdb:episode:62085`), otherwise `{seriesProvider}:{seriesType}:{seriesId}:S{season}E{episode}` (e.g., `tmdb:tv:1396:S02E05`). Specials use `S00E{n}`.
 
 A `ContentItem` does NOT have a single `sourceId`. After deduplication, it may represent the same title from multiple sources. The `sourceRefs` list tracks each origin.
 
@@ -349,7 +361,9 @@ CREATE TABLE canonical_id_aliases (
 
 Empty string `source_id` represents the unified/merged row. Non-empty values represent source-specific state.
 
-**Canonical ID stability:** When provider-set merging causes a canonical ID to change (e.g., an item was first seen with only IMDb, then a new source adds TMDb), the old canonical ID is inserted into `canonical_id_aliases` and the `watch_state` row is migrated to the new canonical ID. Watch state lookups check aliases: `SELECT * FROM watch_state WHERE canonical_id = ? OR canonical_id IN (SELECT alias_id FROM canonical_id_aliases WHERE canonical_id = ?)`. This prevents orphaned progress rows when the provider set grows.
+**Canonical ID stability:** When provider-set merging causes a canonical ID to change (e.g., an item was first seen with only IMDb, then a new source adds TMDb), the old canonical ID is inserted into `canonical_id_aliases` and the `watch_state` row is migrated to the new canonical ID.
+
+Watch state lookups resolve aliases first: given a lookup ID, check `SELECT canonical_id FROM canonical_id_aliases WHERE alias_id = ?`. If a mapping exists, use the resolved canonical ID for the query. If not, use the lookup ID directly. This ensures that callers holding old IDs (e.g., `imdb:movie:tt0063350`) reach the migrated row (now keyed as `tmdb:movie:10331`).
 
 **Key design decisions:**
 - Keyed by `canonical_id` (provider-derived) for cross-source unification
@@ -420,7 +434,7 @@ Stream entries from feed sources include a `hash` field (sha256) computed at bui
 - Complete hits: play from local file
 - Partial hits: resume download via HTTP Range header from last byte, play when sufficient buffer available
 - Feed items with hashes: cached by hash (cross-URL dedup)
-- Jellyfin items: cached by stable key `{serverId}:{itemId}:{mediaSourceId}:{streamIndex}` — NOT by URL, since Jellyfin stream URLs contain session tokens, transcode parameters, and other ephemeral query strings that would cause cache misses or duplicates
+- Jellyfin items: cached ONLY when direct-playing (no transcoding). Key: `{sourceRef.sourceId}:{sourceRef.itemId}:{mediaSourceId}:{streamIndex}`. Transcoded streams are NOT cached — the same media source can produce different transcoded outputs depending on quality settings, bitrate caps, subtitle burn-in, and container negotiation, making the cache key unstable. Direct-play streams are byte-identical to the source file, so the key is stable.
 - Hashless feed items: cached by URL (direct stream URLs are stable for feed content)
 
 ### Cache Management (Settings → Storage → Content Cache)
