@@ -58,7 +58,7 @@ Episode-specific metadata for canonical ID derivation and display:
 - `seriesProviderIds: Map<String, String>` (tmdb, imdb, tvdb — series-level IDs, used when the episode itself lacks a provider ID)
 - `seriesTitle: String?`
 
-The `canonicalId` for an episode is built as: episode's own provider ID if available (`tmdb:episode:62085`), otherwise `{seriesProvider}:{seriesType}:{seriesId}:S{season}E{episode}` (e.g., `tmdb:tv:1396:S02E05`). Specials use `S00E{n}`.
+The `canonicalId` for an episode is built as: episode's own provider ID if available (`tmdb:episode:62085`), otherwise `{seriesProvider}:{seriesType}:{seriesId}:S{season}E{episode}` (e.g., `tmdb:tv:1396:S02E05`). Specials use `S00E{n}`. If season or episode number is unavailable (both nullable), or if series provider IDs are empty, fall back to `{sourceId}:{itemId}` — these episodes cannot deduplicate across sources but still participate in watch tracking.
 
 A `ContentItem` does NOT have a single `sourceId`. After deduplication, it may represent the same title from multiple sources. The `sourceRefs` list tracks each origin.
 
@@ -428,7 +428,7 @@ Stream entries from feed sources include a `hash` field (sha256) computed at bui
 ### ContentCache
 
 - Backed by Android external files directory
-- Dual-keyed: by content hash (when available) AND by URL (fallback)
+- Keyed by content hash when available (feed sources), otherwise by source-specific stable key (Jellyfin direct-play: `{sourceRef.sourceId}:{sourceRef.itemId}:{mediaSourceId}:{streamIndex}`) or by URL (hashless feed items)
 - Tracks file state: `COMPLETE`, `PARTIAL(bytes_downloaded, total_bytes)`, `MISSING`
 - `ContentCache.has(hash)` returns `CacheHit.COMPLETE`, `CacheHit.PARTIAL(path, range)`, or `CacheHit.MISS`
 - Complete hits: play from local file
@@ -493,7 +493,7 @@ Each phase is independently shippable and testable.
 
 ### Phase 5: Content-Addressed Caching & P2P
 
-- Content hash integration in feed protocol (feed sources only; Jellyfin cache uses stable `{serverId}:{itemId}:{mediaSourceId}:{streamIndex}` key — see Section 6)
+- Content hash integration in feed protocol (feed sources only; Jellyfin direct-play-only cache uses stable `{sourceRef.sourceId}:{sourceRef.itemId}:{mediaSourceId}:{streamIndex}` key; transcoded streams are not cached — see Section 6)
 - Local content cache with hash-based deduplication
 - Optional BitTorrent seeding for cached public content
 - **Result:** Reduced bandwidth, offline playback, community distribution
