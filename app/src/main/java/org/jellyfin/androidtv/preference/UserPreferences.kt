@@ -121,6 +121,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var themeSongsSeries = booleanPreference("theme_songs_series", true)
 		var themeSongsEpisodes = booleanPreference("theme_songs_episodes", false)
 		var themeSongsArchiveFallback = booleanPreference("theme_songs_archive_fallback", true)
+		var themeSongsCacheEnabled = booleanPreference("theme_songs_cache_enabled", true)
 
 		/* Playback - Audio related */
 		/**

@@ -29,7 +29,14 @@ import java.net.URLEncoder
  */
 class ArchiveHelper(private val context: Context) {
 
+	private val cache by lazy {
+		context.getSharedPreferences("theme_song_cache", Context.MODE_PRIVATE)
+	}
+
 	companion object {
+		private const val CACHE_PREFIX = "theme_url_"
+		private const val CACHE_MISS_PREFIX = "theme_miss_"
+		private const val CACHE_TTL_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
 		private const val USER_AGENT = "AndroidTV/1.0"
 		private const val CONNECT_TIMEOUT_MS = 10000
 		private const val READ_TIMEOUT_MS = 15000
@@ -55,7 +62,16 @@ class ArchiveHelper(private val context: Context) {
 	private var lastRequestTime = 0L
 	private val minRequestInterval = 1000L
 
-	suspend fun getThemeSongUrl(item: BaseItemDto): String? = withContext(Dispatchers.IO) {
+	suspend fun getThemeSongUrl(item: BaseItemDto, useCache: Boolean = true): String? = withContext(Dispatchers.IO) {
+		val itemId = item.id?.toString() ?: return@withContext null
+
+		if (useCache) {
+			getCachedUrl(itemId)?.let { cached ->
+				Timber.d("Theme song cache hit for $itemId")
+				return@withContext cached.ifEmpty { null }
+			}
+		}
+
 		try {
 			val targetName = extractTargetName(item)
 
@@ -66,15 +82,46 @@ class ArchiveHelper(private val context: Context) {
 			for (collection in THEME_SONG_COLLECTIONS) {
 				val result = searchCollection(targetName, collection)
 				if (result != null) {
+					if (useCache) cacheUrl(itemId, result)
 					return@withContext result
 				}
 			}
 
+			if (useCache) cacheUrl(itemId, "")
 			return@withContext null
 		} catch (e: Exception) {
 			Timber.e(e, "Error searching theme song")
 			null
 		}
+	}
+
+	private fun getCachedUrl(itemId: String): String? {
+		val key = CACHE_PREFIX + itemId
+		val tsKey = key + "_ts"
+		val url = cache.getString(key, null) ?: return null
+		val timestamp = cache.getLong(tsKey, 0)
+		if (System.currentTimeMillis() - timestamp > CACHE_TTL_MS) {
+			cache.edit().remove(key).remove(tsKey).apply()
+			return null
+		}
+		return url
+	}
+
+	private fun cacheUrl(itemId: String, url: String) {
+		val key = CACHE_PREFIX + itemId
+		cache.edit()
+			.putString(key, url)
+			.putLong(key + "_ts", System.currentTimeMillis())
+			.apply()
+	}
+
+	fun clearCache() {
+		cache.edit().clear().apply()
+		Timber.i("Theme song cache cleared")
+	}
+
+	fun getCacheSize(): Int {
+		return cache.all.count { it.key.startsWith(CACHE_PREFIX) && !it.key.endsWith("_ts") }
 	}
 
 	private suspend fun searchCollection(seriesName: String, collection: String): String? {

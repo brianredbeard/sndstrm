@@ -268,6 +268,11 @@
     <string name="pref_theme_song_episodes_summary">Play theme songs for TV episodes</string>
     <string name="pref_theme_song_archive_fallback">Online fallback</string>
     <string name="pref_theme_song_archive_fallback_summary">Stream theme songs from archive.org when not available locally</string>
+    <string name="pref_theme_song_cache">Cache theme songs</string>
+    <string name="pref_theme_song_cache_summary">Save archive.org lookup results to disk to avoid repeated network requests</string>
+    <string name="pref_theme_song_clear_cache">Clear theme song cache</string>
+    <string name="pref_theme_song_clear_cache_summary">Remove all cached theme song lookups</string>
+    <string name="pref_theme_song_cache_cleared">Cleared %d cached theme song lookups</string>
     <string name="pref_about_title">About</string>
     <string name="pref_external_player">Use external player</string>
     <string name="pref_next_up_timeout_summary">How long to wait before playing the next item</string>
