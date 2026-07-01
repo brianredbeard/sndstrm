@@ -25,6 +25,7 @@ interface ContentSource {
     val name: String
     val type: SourceType  // FEED or SERVER
     val state: StateFlow<ConnectionState>  // CONNECTED, DISCONNECTED, CONNECTING
+    val playableResolver: PlayableResolver
 
     fun getHome(): Flow<List<ContentRow>>
     fun search(query: String): Flow<List<ContentItem>>
@@ -37,7 +38,7 @@ interface ContentSource {
 
 Unified data class wrapping either a Jellyfin `BaseItemDto` or a feed item:
 
-- `canonicalId: String` — stable ID for deduped items, derived from best available provider ID (`tmdb:10331`) or `{sourceId}:{itemId}` for providerless items
+- `canonicalId: String` — stable ID for deduped items, namespaced by content type and provider. Format: `{provider}:{type}:{id}` (e.g., `tmdb:movie:10331`, `tmdb:tv:1396`, `imdb:movie:tt0063350`). For providerless items: `{sourceId}:{itemId}`. TMDb movie and TV ID spaces are separate — the type namespace prevents collisions.
 - `title: String`
 - `year: Int?`
 - `overview: String?`
@@ -62,6 +63,7 @@ Per-source reference to an item:
 One playable version of a content item:
 
 - `sourceRef: SourceRef` — which source and item this stream belongs to
+- `url: String?` — direct stream URL (always set for feed sources, null for Jellyfin sources where the URL is resolved at play time via the API)
 - `codec: String` (h264, hevc, av1, etc.)
 - `audioCodec: String` (aac, ac3, eac3, etc.)
 - `container: String` (mp4, mkv, hls, etc.)
@@ -324,8 +326,8 @@ Local SQLite database tracks unified watch state across all sources.
 **Schema:**
 ```sql
 CREATE TABLE watch_state (
-    canonical_id TEXT NOT NULL,  -- ContentItem.canonicalId (e.g., "tmdb:10331")
-    source_id TEXT,              -- NULL for unified entries, source ID for source-specific
+    canonical_id TEXT NOT NULL,  -- ContentItem.canonicalId (e.g., "tmdb:movie:10331")
+    source_id TEXT NOT NULL DEFAULT '',  -- empty string for unified entries, source ID for source-specific
     item_id TEXT,                -- source-specific item ID for back-mapping
     progress_ticks INTEGER DEFAULT 0,
     watched INTEGER DEFAULT 0,
@@ -334,11 +336,13 @@ CREATE TABLE watch_state (
 );
 ```
 
+Empty string `source_id` represents the unified/merged row. Non-empty values represent source-specific state.
+
 **Key design decisions:**
 - Keyed by `canonical_id` (provider-derived) for cross-source unification
 - `source_id` is NULL for the unified row, non-NULL for source-specific overrides
 - Items without provider IDs use `{sourceId}:{itemId}` as canonical_id — these cannot deduplicate but still participate in local tracking
-- Episodes keyed as `tmdb:series:10331:S02E05` (series provider ID + season/episode)
+- Episodes: if the episode itself has a provider ID, use it (`tmdb:episode:62085`). Otherwise, derive from series: `tmdb:tv:1396:S02E05`. Specials use `S00E{n}`. Sources with different season/episode numbering (e.g., absolute ordering vs aired ordering) will not deduplicate — this is intentional to avoid false matches.
 - When Jellyfin reports progress AND local DB has progress, Jellyfin wins (it's the authoritative source for its own content). Local DB fills in for feed items and cross-source resume.
 - "Continue watching" row: query Jellyfin servers for their resume items UNION local DB for feed resume items, dedup by canonical_id, sort by last_played
 
@@ -351,12 +355,12 @@ CREATE TABLE watch_state (
 - Auth: OAuth bearer token stored in auth store alongside Jellyfin credentials
 
 **Encryption model:**
-- On account creation, client generates a 256-bit AES key derived from a user-chosen passphrase via Argon2id
+- On account creation, client generates a random 16-byte salt and derives a 256-bit AES key from a user-chosen passphrase via Argon2id (memory=64MB, iterations=3, parallelism=1)
 - Key never leaves the device — sndstrm.tv never sees it
-- Sync payloads are AES-GCM encrypted client-side before upload
-- New device setup: user enters passphrase → derives same key → decrypts sync blob
+- Sync payloads are AES-GCM encrypted client-side before upload, with a random 12-byte IV per blob
+- sndstrm.tv stores: encrypted blob, salt, KDF parameters (algorithm, memory, iterations, parallelism), IV, last sync timestamp, blob size. Salt and KDF params are not secret — they're needed for key re-derivation but don't reveal the passphrase or plaintext.
+- New device setup: client fetches salt + KDF params from server → user enters passphrase → derives same key using stored salt/params → decrypts sync blob
 - Passphrase loss = sync data loss (no recovery). Local DB remains intact.
-- sndstrm.tv stores: encrypted blob, last sync timestamp, blob size. No plaintext metadata.
 
 **Limitation:** OAuth token identifies the user for blob storage routing, but sndstrm.tv cannot inspect blob contents. This is a genuine zero-knowledge design — the trade-off is no server-side features on the watch data (no recommendations, no trending).
 
@@ -438,9 +442,9 @@ Each phase is independently shippable and testable.
 
 ### Phase 2: Multi-Server
 
-- `JellyfinContentSource` wrapping existing Jellyfin SDK
-- Support 2+ simultaneous Jellyfin server sessions
-- Refactor `SessionRepository` from single to multi-session
+- `JellyfinContentSource` wrapping existing Jellyfin SDK calls
+- Support 2+ simultaneous Jellyfin server connections
+- `SessionRepository` retains single-session API for the primary server (no refactor). Secondary servers are managed by `SourceRegistry` — each `JellyfinContentSource` owns its own `ApiClient` independently.
 - Source badges on cards, home screen interleaving
 - **Result:** Browse multiple Jellyfin libraries in one UI
 
@@ -461,7 +465,7 @@ Each phase is independently shippable and testable.
 
 ### Phase 5: Content-Addressed Caching & P2P
 
-- Content hash integration in feed protocol and Jellyfin source
+- Content hash integration in feed protocol (feed sources only; Jellyfin cache uses URL/media-source identity as key — see Section 6)
 - Local content cache with hash-based deduplication
 - Optional BitTorrent seeding for cached public content
 - **Result:** Reduced bandwidth, offline playback, community distribution
