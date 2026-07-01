@@ -363,7 +363,9 @@ Empty string `source_id` represents the unified/merged row. Non-empty values rep
 
 **Canonical ID stability:** When provider-set merging causes a canonical ID to change (e.g., an item was first seen with only IMDb, then a new source adds TMDb), the old canonical ID is inserted into `canonical_id_aliases` and the `watch_state` row is migrated to the new canonical ID.
 
-Watch state lookups resolve aliases first: given a lookup ID, check `SELECT canonical_id FROM canonical_id_aliases WHERE alias_id = ?`. If a mapping exists, use the resolved canonical ID for the query. If not, use the lookup ID directly. This ensures that callers holding old IDs (e.g., `imdb:movie:tt0063350`) reach the migrated row (now keyed as `tmdb:movie:10331`).
+During migration, all existing aliases pointing to the old canonical ID are also updated to point to the new one. For example, if an item transitions `{sourceId}:{itemId}` → `imdb:movie:tt0063350` → `tmdb:movie:10331`, the migration to TMDb updates both the IMDb alias AND the original source alias to point to `tmdb:movie:10331`. This keeps the alias table flat — every alias always points directly to the current canonical ID, never to an intermediate.
+
+Watch state lookups resolve aliases first: given a lookup ID, check `SELECT canonical_id FROM canonical_id_aliases WHERE alias_id = ?`. If a mapping exists, use the resolved canonical ID for the query. If not, use the lookup ID directly. Since aliases are always flattened, a single lookup is sufficient — no recursive resolution needed.
 
 **Key design decisions:**
 - Keyed by `canonical_id` (provider-derived) for cross-source unification
