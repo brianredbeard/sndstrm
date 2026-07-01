@@ -73,6 +73,17 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 				}
 			}
 
+			checkbox {
+				setTitle(R.string.pref_theme_song_cache_permanent)
+				setContent(R.string.pref_theme_song_cache_permanent_summary)
+				bind(userPreferences, UserPreferences.themeSongsCachePermanent)
+				depends {
+					userPreferences[UserPreferences.themeSongsEnabled] &&
+						userPreferences[UserPreferences.themeSongsArchiveFallback] &&
+						userPreferences[UserPreferences.themeSongsCacheEnabled]
+				}
+			}
+
 			action {
 				setTitle(R.string.pref_theme_song_clear_cache)
 				setContent(R.string.pref_theme_song_clear_cache_summary)

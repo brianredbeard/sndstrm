@@ -109,7 +109,7 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 				}
 
 				if (useArchiveFallback && userPreferences[UserPreferences.themeSongsArchiveFallback]) {
-					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled])
+					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled], userPreferences[UserPreferences.themeSongsCachePermanent])
 					if (archiveUrl != null) {
 						scope.launch(Dispatchers.Main) {
 							initializeAndPlay(archiveUrl)
@@ -123,7 +123,7 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 				e.printStackTrace()
 				Timber.e(e, "Error getting theme song from Jellyfin for: ${item.name}")
 				if (useArchiveFallback && userPreferences[UserPreferences.themeSongsArchiveFallback]) {
-					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled])
+					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled], userPreferences[UserPreferences.themeSongsCachePermanent])
 					if (archiveUrl != null) {
 						scope.launch(Dispatchers.Main) {
 							initializeAndPlay(archiveUrl)

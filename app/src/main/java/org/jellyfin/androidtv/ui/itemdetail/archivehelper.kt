@@ -62,11 +62,11 @@ class ArchiveHelper(private val context: Context) {
 	private var lastRequestTime = 0L
 	private val minRequestInterval = 1000L
 
-	suspend fun getThemeSongUrl(item: BaseItemDto, useCache: Boolean = true): String? = withContext(Dispatchers.IO) {
+	suspend fun getThemeSongUrl(item: BaseItemDto, useCache: Boolean = true, permanentCache: Boolean = false): String? = withContext(Dispatchers.IO) {
 		val itemId = item.id?.toString() ?: return@withContext null
 
 		if (useCache) {
-			getCachedUrl(itemId)?.let { cached ->
+			getCachedUrl(itemId, permanentCache)?.let { cached ->
 				Timber.d("Theme song cache hit for $itemId")
 				return@withContext cached.ifEmpty { null }
 			}
@@ -95,14 +95,16 @@ class ArchiveHelper(private val context: Context) {
 		}
 	}
 
-	private fun getCachedUrl(itemId: String): String? {
+	private fun getCachedUrl(itemId: String, permanent: Boolean = false): String? {
 		val key = CACHE_PREFIX + itemId
 		val tsKey = key + "_ts"
 		val url = cache.getString(key, null) ?: return null
-		val timestamp = cache.getLong(tsKey, 0)
-		if (System.currentTimeMillis() - timestamp > CACHE_TTL_MS) {
-			cache.edit().remove(key).remove(tsKey).apply()
-			return null
+		if (!permanent) {
+			val timestamp = cache.getLong(tsKey, 0)
+			if (System.currentTimeMillis() - timestamp > CACHE_TTL_MS) {
+				cache.edit().remove(key).remove(tsKey).apply()
+				return null
+			}
 		}
 		return url
 	}

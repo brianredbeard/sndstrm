@@ -270,6 +270,8 @@
     <string name="pref_theme_song_archive_fallback_summary">Stream theme songs from archive.org when not available locally</string>
     <string name="pref_theme_song_cache">Cache theme songs</string>
     <string name="pref_theme_song_cache_summary">Save archive.org lookup results to disk to avoid repeated network requests</string>
+    <string name="pref_theme_song_cache_permanent">Keep cache permanently</string>
+    <string name="pref_theme_song_cache_permanent_summary">Cache entries never expire (until manually cleared)</string>
     <string name="pref_theme_song_clear_cache">Clear theme song cache</string>
     <string name="pref_theme_song_clear_cache_summary">Remove all cached theme song lookups</string>
     <string name="pref_theme_song_cache_cleared">Cleared %d cached theme song lookups</string>
