@@ -6,21 +6,20 @@ package org.jellyfin.androidtv.ui.startup.fragment
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.compose.content
 import org.jellyfin.androidtv.R
@@ -36,12 +35,14 @@ fun SplashScreen() {
 			verticalArrangement = Arrangement.Center,
 			modifier = Modifier.fillMaxSize(),
 		) {
-			Image(
-				painter = painterResource(R.drawable.app_logo),
-				contentDescription = stringResource(R.string.app_name),
-				modifier = Modifier
-					.width(400.dp)
-					.fillMaxHeight()
+			BasicText(
+				text = stringResource(R.string.app_name),
+				style = androidx.compose.ui.text.TextStyle(
+					color = Color.White,
+					fontSize = 48.sp,
+					fontWeight = FontWeight.Light,
+					letterSpacing = 8.sp,
+				),
 			)
 		}
 	}
