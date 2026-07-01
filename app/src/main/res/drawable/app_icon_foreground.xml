@@ -5,52 +5,36 @@
     android:viewportWidth="512"
     android:viewportHeight="512">
 
-    <group
-        android:pivotX="256"
-        android:pivotY="256"
-        android:rotation="90">
+    <!-- Outer shape: the border/frame of the icon -->
+    <path
+        android:pathData="M256,26.4 C225.8,87.1 26.2,382.7 56.4,443.4 86.6,504.1 455.7,503.4 485.6,443.4 515.5,383.4 286.2,26.4 256,26.4 Z M256,115.5 C296.3,115.5 426.1,351.4 406.5,390.8 386.9,430.1 125.4,430.6 105.6,390.8 85.8,351 215.7,115.5 256,115.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="100"
+                android:startY="100"
+                android:endX="450"
+                android:endY="450">
+                <item android:offset="0" android:color="#FFdcb782" />
+                <item android:offset="1" android:color="#FF8b5a2b" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-        <!-- Outer shape -->
-        <group
-            android:translateX="-3.86"
-            android:translateY="2.39">
-            <path
-                android:pathData="M256,23.3 C194.4,23.3 -3.8,382.7 26.4,443.4 56.6,504.1 455.7,503.4 485.6,443.4 515.5,383.4 317.6,23.3 256,23.3 Z M406.5,390.8 C386.9,430.1 125.4,430.6 105.6,390.8 85.8,351 215.7,115.5 256,115.5 296.3,115.5 426.1,351.4 406.5,390.8 Z">
-                <aapt:attr name="android:fillColor">
-                    <gradient
-                        android:type="linear"
-                        android:startX="110"
-                        android:startY="213"
-                        android:endX="496"
-                        android:endY="436">
-                        <item android:offset="0" android:color="#FFdcb782" />
-                        <item android:offset="1" android:color="#FF8b5a2b" />
-                    </gradient>
-                </aapt:attr>
-            </path>
-        </group>
+    <!-- Inner shape: the filled center gem -->
+    <path
+        android:pathData="M256,201.6 C235.6,201.6 169.8,320.9 179.8,341 189.8,361.1 322.3,360.9 332.2,341 342.1,321.1 276.4,201.6 256,201.6 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="170"
+                android:startY="200"
+                android:endX="340"
+                android:endY="360">
+                <item android:offset="0" android:color="#FFdcb782" />
+                <item android:offset="1" android:color="#FF8b5a2b" />
+            </gradient>
+        </aapt:attr>
+    </path>
 
-        <!-- Inner shape -->
-        <group
-            android:scaleX="0.487"
-            android:scaleY="0.487"
-            android:translateX="169"
-            android:translateY="143">
-            <path
-                android:pathData="M256,201.6 C235.6,201.6 169.8,320.9 179.8,341 189.8,361.1 322.3,360.9 332.2,341 342.1,321.1 276.4,201.6 256,201.6 Z">
-                <aapt:attr name="android:fillColor">
-                    <gradient
-                        android:type="linear"
-                        android:startX="110"
-                        android:startY="213"
-                        android:endX="496"
-                        android:endY="436">
-                        <item android:offset="0" android:color="#FFdcb782" />
-                        <item android:offset="1" android:color="#FF8b5a2b" />
-                    </gradient>
-                </aapt:attr>
-            </path>
-        </group>
-
-    </group>
 </vector>
