@@ -91,6 +91,13 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 				icon = R.drawable.ic_grid
 				withFragment<LibrariesPreferencesScreen>()
 			}
+
+			link {
+				setTitle(R.string.pref_theme_songs)
+				setContent(R.string.pref_theme_songs_description)
+				icon = R.drawable.ic_guide
+				withFragment<ThemeSongPreferencesScreen>()
+			}
 		}
 
 		category {
