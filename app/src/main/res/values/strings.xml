@@ -275,6 +275,14 @@
     <string name="pref_theme_song_clear_cache">Clear theme song cache</string>
     <string name="pref_theme_song_clear_cache_summary">Remove all cached theme song lookups</string>
     <string name="pref_theme_song_cache_cleared">Cleared %d cached theme song lookups</string>
+    <!-- App Updater -->
+    <string name="app_updater_channel_name">App Updates</string>
+    <string name="app_updater_channel_description">Notifications for app updates</string>
+    <string name="update_downloading_title">Downloading update</string>
+    <string name="update_downloading_message">Downloading version %1$s</string>
+    <string name="update_error_title">Update error</string>
+    <string name="install_error">Failed to install update</string>
+
     <string name="pref_about_title">About</string>
     <string name="pref_external_player">Use external player</string>
     <string name="pref_next_up_timeout_summary">How long to wait before playing the next item</string>
