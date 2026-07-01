@@ -153,7 +153,7 @@ The current codebase assumes one active `Session`, one bound `ApiClient`, and on
 - Rows interleaved by priority: primary server → secondary servers → feeds
 - Source badge (small icon) on each card identifies origin
 - Disconnected sources omitted silently — no error UI clutter
-- Deduplication applies to global surfaces (search, "Recently Added") but NOT to source-owned rows ("Continue Watching" from Server A stays distinct from Server B's)
+- Deduplication applies to global surfaces (search, "Recently Added") but NOT to source-owned rows (next up, active recordings). "Continue Watching" is tier-dependent: in Tier A, per-server rows stay distinct; in Tier B, a unified row replaces them (see Section 5).
 
 ### Content Deduplication (ContentMatcher)
 
@@ -430,7 +430,7 @@ Stream entries from feed sources include a `hash` field (sha256) computed at bui
 - Backed by Android external files directory
 - Keyed by content hash when available (feed sources), otherwise by source-specific stable key (Jellyfin direct-play: `{sourceRef.sourceId}:{sourceRef.itemId}:{mediaSourceId}:{streamIndex}`) or by URL (hashless feed items)
 - Tracks file state: `COMPLETE`, `PARTIAL(bytes_downloaded, total_bytes)`, `MISSING`
-- `ContentCache.has(hash)` returns `CacheHit.COMPLETE`, `CacheHit.PARTIAL(path, range)`, or `CacheHit.MISS`
+- `ContentCache.lookup(streamSource: StreamSource)` derives the appropriate key (hash, stable Jellyfin key, or URL) from the stream source and returns `CacheHit.COMPLETE`, `CacheHit.PARTIAL(path, range)`, or `CacheHit.MISS`
 - Complete hits: play from local file
 - Partial hits: resume download via HTTP Range header from last byte, play when sufficient buffer available
 - Feed items with hashes: cached by hash (cross-URL dedup)
