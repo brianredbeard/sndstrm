@@ -20,6 +20,11 @@ private val AppTheme.style
 		AppTheme.DARK -> R.style.Theme_Jellyfin
 		AppTheme.EMERALD -> R.style.Theme_Jellyfin_Emerald
 		AppTheme.MUTED_PURPLE -> R.style.Theme_Jellyfin_MutedPurple
+		AppTheme.PURPLE_HAZE -> R.style.Theme_Jellyfin_PurpleHaze
+		AppTheme.BASIC -> R.style.Theme_Basic
+		AppTheme.FLEXY -> R.style.Theme_Jellyfin_Flexy
+		AppTheme.YELLOW_TOWN -> R.style.Theme_YellowTown
+		AppTheme.DARK_PURPLE -> R.style.Theme_Jellyfin_DarkPurple
 	}
 
 /**

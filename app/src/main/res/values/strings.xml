@@ -249,8 +249,13 @@
     <string name="lbl_image_type">Image type</string>
     <string name="lbl_image_size">Image size</string>
     <string name="lbl_my_media">My media</string>
-    <string name="pref_theme_dark">Dark (Default)</string>
-    <string name="pref_theme_emerald">Classic emerald</string>
+    <string name="pref_theme_purple_haze">Lavender Haze</string>
+    <string name="pref_theme_dark">Dark Matter</string>
+    <string name="pref_theme_emerald">Green Forest</string>
+    <string name="pref_theme_basic">Basic Dark</string>
+    <string name="pref_theme_flexy">Flexy</string>
+    <string name="pref_theme_yellow_town">Yellow Town</string>
+    <string name="pref_theme_dark_purple">Dark Purple</string>
     <string name="pref_about_title">About</string>
     <string name="pref_external_player">Use external player</string>
     <string name="pref_next_up_timeout_summary">How long to wait before playing the next item</string>
@@ -346,7 +351,7 @@
     <string name="user_picker_last_user_title">Most recently used</string>
     <string name="user_picker_last_user_summary">Use the last active account</string>
     <string name="lbl_switch_user">Switch account</string>
-    <string name="pref_theme_muted_purple">Muted purple</string>
+    <string name="pref_theme_muted_purple">Light Breeze</string>
     <string name="no_network_permissions">Jellyfin requires network permissions to function</string>
     <string name="press_to_close">Press to close</string>
     <string name="saved_servers">Saved servers</string>
