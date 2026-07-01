@@ -624,4 +624,63 @@
         <item quantity="one">%1$s album</item>
         <item quantity="other">%1$s albums</item>
     </plurals>
+
+    <!-- DUNE resource strings -->
+    <string name="app_id" translatable="false">tv.sndstrm.app</string>
+    <string name="app_name">sndstrm</string>
+    <string name="app_search_suggest_authority" translatable="false">tv.sndstrm.app.content</string>
+    <string name="app_search_suggest_intent_data" translatable="false">content://tv.sndstrm.app.content/intent</string>
+    <string name="audio">Audio</string>
+    <string name="audio_title">Audio</string>
+    <string name="error_occurred">An error occurred. Please try again.</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="home_content_description">Home screen content</string>
+    <string name="lbl_live_tv">Live TV</string>
+    <string name="lbl_voice_search">Voice Search</string>
+    <string name="media_image">Media image</string>
+    <string name="next">Next</string>
+    <string name="no_results_found">No results found</string>
+    <string name="play_pause">Play/Pause</string>
+    <string name="playback_info_title">Playback</string>
+    <string name="pref_audio_default_language">Default audio language</string>
+    <string name="pref_audio_default_language_summary">Set the default language for audio tracks</string>
+    <string name="pref_audio_language_none">(Default)</string>
+    <string name="pref_subtitle_default_language">Default Subtitle Language</string>
+    <string name="pref_subtitle_default_language_summary">Set the default language for subtitles</string>
+    <string name="pref_subtitle_language_ara">العربية (Arabic)</string>
+    <string name="pref_subtitle_language_ces">Čeština (Czech)</string>
+    <string name="pref_subtitle_language_dan">Dansk (Danish)</string>
+    <string name="pref_subtitle_language_deu">Deutsch (German)</string>
+    <string name="pref_subtitle_language_ell">Ελληνικά (Greek)</string>
+    <string name="pref_subtitle_language_eng">English</string>
+    <string name="pref_subtitle_language_fin">Suomi (Finnish)</string>
+    <string name="pref_subtitle_language_fra">Français (French)</string>
+    <string name="pref_subtitle_language_heb">עברית (Hebrew)</string>
+    <string name="pref_subtitle_language_hin">हिन्दी (Hindi)</string>
+    <string name="pref_subtitle_language_hun">Magyar (Hungarian)</string>
+    <string name="pref_subtitle_language_ind">Bahasa Indonesia (Indonesian)</string>
+    <string name="pref_subtitle_language_ita">Italiano (Italian)</string>
+    <string name="pref_subtitle_language_jpn">日本語 (Japanese)</string>
+    <string name="pref_subtitle_language_kor">한국어 (Korean)</string>
+    <string name="pref_subtitle_language_msa">Bahasa Melayu (Malay)</string>
+    <string name="pref_subtitle_language_nld">Nederlands (Dutch)</string>
+    <string name="pref_subtitle_language_none">None (Disabled)</string>
+    <string name="pref_subtitle_language_nor">Norsk (Norwegian)</string>
+    <string name="pref_subtitle_language_pol">Polski (Polish)</string>
+    <string name="pref_subtitle_language_por">Português (Portuguese)</string>
+    <string name="pref_subtitle_language_ron">Română (Romanian)</string>
+    <string name="pref_subtitle_language_rus">Русский (Russian)</string>
+    <string name="pref_subtitle_language_slk">Slovenčina (Slovak)</string>
+    <string name="pref_subtitle_language_spa">Español (Spanish)</string>
+    <string name="pref_subtitle_language_swe">Svenska (Swedish)</string>
+    <string name="pref_subtitle_language_tha">ไทย (Thai)</string>
+    <string name="pref_subtitle_language_tur">Türkçe (Turkish)</string>
+    <string name="pref_subtitle_language_ukr">Українська (Ukrainian)</string>
+    <string name="pref_subtitle_language_vie">Tiếng Việt (Vietnamese)</string>
+    <string name="pref_subtitle_language_zho">中文 (Chinese)</string>
+    <string name="previous">Previous</string>
+    <string name="stats_title">Playback Information</string>
+    <string name="subtitles">Subtitles</string>
+    <string name="video_title">Video</string>
+
 </resources>
