@@ -261,7 +261,6 @@
     <string name="lbl_auto_crop">قص تلقائي</string>
     <string name="lbl_special">الخاص</string>
     <string name="lbl_hide_unwatched_count">عندما يكون قد تم مشاهدة العنصر</string>
-    <string name="login_help_description">Jellyfin يستلزم خادم للإتصال به. قم بزيارة   docs.jellyfin.org او قم بمسح رمز QR للبدأ مع .</string>
     <string name="pref_developer_link">إعدادات المطورين</string>
     <string name="lbl_manage_servers">إدارة الخوادم</string>
     <string name="watch_count_overflow">+99</string>
@@ -281,10 +280,10 @@
     <string name="no_user_warning">لم نستطع العثور على أي مستخدم!
 \nأضف مستخدم جديد بالضغط على زر \"إضافة مستخدم\".</string>
     <string name="welcome_content">إتصل بخادمك للبدأ.</string>
-    <string name="welcome_title">مرحبا الى DUNE!</string>
+    <string name="welcome_title">مرحبا الى sndstrm!</string>
     <string name="saved_servers">الخوادم المحفوظة</string>
     <string name="press_to_close">إظغط للغلق</string>
-    <string name="no_network_permissions">DUNE يحتاج إلى صلاحيات الشبكة للعمل</string>
+    <string name="no_network_permissions">sndstrm يحتاج إلى صلاحيات الشبكة للعمل</string>
     <string name="lbl_switch_user">تغيير المستخدم</string>
     <string name="user_picker_last_user_summary">إظهار آخر مستخدم نشط</string>
     <string name="user_picker_disable_summary">إظهار شاشة تسجيل الدخول دائما</string>

@@ -1,107 +1,99 @@
-<p align="center">
-  <img src="https://files.catbox.moe/jqk9rl.jpg" alt="DUNE" width="100%">
-</p>
+# sndstrm
 
-# DUNE - Jellyfin Android TV Client
+A maintained fork of the [Jellyfin](https://jellyfin.org/) Android TV client
+with enhanced UI/UX and additional features.
 
-[![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue?labelColor=555555&style=for-the-badge)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![Latest Release](https://img.shields.io/github/v/release/Sam42a/DUNE?label=Latest%20Release&labelColor=555555&style=for-the-badge)](https://github.com/Sam42a/DUNE/releases/latest)
-[![GitHub Stars](https://img.shields.io/github/stars/Sam42a/DUNE?label=Stars&labelColor=555555&style=for-the-badge)](https://github.com/Sam42a/DUNE/stargazers)
-[![Support Me](https://img.shields.io/badge/Support_Me-Buy_a_Coffee-orange?labelColor=555555&style=for-the-badge)](https://coff.ee/sam42)
+> **This is an unofficial, community-maintained fork.** It is not affiliated
+> with the Jellyfin project. The official client is at
+> [jellyfin/jellyfin-androidtv](https://github.com/jellyfin/jellyfin-androidtv).
 
-<p align="center">
-  <br>
-  <img src="https://i.imgur.com/4Oe1APd.jpeg" alt="DUNE Screenshot" width="100%">
-</p>
+## Lineage
 
-## About
+sndstrm continues the work of [DUNE](https://github.com/Sam42a/DUNE) (by
+Sam42a), itself a fork of the official Jellyfin Android TV client. Full history
+is documented in [FORK.md](FORK.md).
 
-**DUNE** is a modified version of the official [Jellyfin](https://jellyfin.org/) Android TV client with enhanced UI/UX and additional customization options.
-
-> **Note**: This is an unofficial fork not affiliated with the Jellyfin project. The official Jellyfin Android TV client can be found at [jellyfin/jellyfin-androidtv](https://github.com/jellyfin/jellyfin-androidtv).
-
-## Translating
-
-This project uses the same translation system as the original Jellyfin Android TV client. If you'd like to help, please contribute to the [official Jellyfin Weblate instance](https://translate.jellyfin.org/projects/jellyfin-android/jellyfin-androidtv).
-
-## Key Features
+## Features
 
 ### Visual & Interface
-**Modernized UI Framework**
 - Redesigned home screen with improved content hierarchy
-- Enhanced login experience with visual feedback
-- Default avatars for users without profile images
-- Intuitive search interface with voice input
-- Multiple theme options including OLED-optimized dark mode, based on [Jellyfin Android TV OLED](https://github.com/LitCastVlog/jellyfin-androidtv-OLED)
+- OLED-optimized dark mode and multiple theme options
+- Dynamic color extraction from backdrop images
+- DreamView screensaver with smooth transitions
+- Enhanced login screen with default avatars and visual feedback
 
-### Customization
-**Library Presentation**
-- Toggle between classic and modern layouts
-- Dynamic backdrops from media artwork
-- Customizable homescreen rows (genres, favorites, collections)
+### Home Screen
+- Customizable home sections and genre rows
+- "Because You Watched" suggested content row
+- Combined continue watching / next up row
+- Vertical alphabet sidebar for grid browsing
+- Launcher channel integration
 
-### Media Experience
-**Enhanced Playback**
-- Advanced subtitle controls
-- Customizable background effects
-- Optimized performance
+### Playback
+- Episode selector in playback overlay
+- Hardware acceleration toggle
+- Audio downmix auto-fallback
+- Chapter support in overlay
+- Configurable skip duration
 
-### Technical Improvements
-- Reduced memory usage
-- Faster app startup
-- Side by side installation alongside official client
-- Built in automatic updates
+### Subtitles
+- Subtitle download functionality
+- TX3G/MOV_TEXT subtitle support
+- Default subtitle language preference
+- Subtitle preview
+
+### Settings & Customization
+- Configurable image disk cache size
+- In-app language selector
+- Genre manager with sorting preferences
+- Preferences UI migrated to Jetpack Compose
 
 ## Building from Source
 
 ### Requirements
-- Android Studio Giraffe (2022.3.1+)
-- Android SDK (API 35)
-- OpenJDK 21+
+- Android Studio (latest stable)
+- JDK 21
+- Android SDK with API level matching `compileSdk` in `gradle/libs.versions.toml`
 
 ### Build Instructions
+
 ```bash
-# Clone repository
-git clone https://github.com/Sam42a/DUNE.git
-cd DUNE-main
+git clone https://github.com/brianredbeard/sndstrm.git
+cd sndstrm
+./gradlew assembleStandardDebug
+```
 
-# Build standard version
-./gradlew assembleStandardRelease
+For the enhanced variant (separate package ID, can be installed alongside
+official Jellyfin):
 
-# Or build enhanced version (coexists with official app)
-./gradlew assembleEnhancedRelease
+```bash
+./gradlew buildEnhanced
 ```
 
 ### Install on Device
-```bash
-# Install debug version
-./gradlew installStandardDebug
 
-# Install enhanced release
-./gradlew installEnhancedRelease
+```bash
+# Debug build
+adb install app/build/outputs/apk/standard/debug/sndstrm-androidtv-*.apk
+
+# Enhanced build
+adb install app/build/outputs/apk/enhanced/release/sndstrm-androidtv-0.1.1.apk
 ```
 
-**Note:** The enhanced version uses package ID `Dune.enhanced.tv` which allows it to be installed alongside the original Jellyfin app.
+## Contributing
 
-## Third-Party Libraries
-
-This project uses the following third-party libraries:
-
-- **Jellyfin SDK** - [GPL-2.0](https://github.com/jellyfin/sdk-kotlin)
-- **AndroidX Libraries** - [Apache-2.0](https://developer.android.com/jetpack/androidx)
-- **Kotlin Coroutines** - [Apache-2.0](https://github.com/Kotlin/kotlinx.coroutines)
-- **Koin** - [Apache-2.0](https://insert-koin.io/)
-- **Coil** - [Apache-2.0](https://coil-kt.github.io/coil/)
-- **Markwon** - [Apache-2.0](https://noties.io/Markwon/)
-- **Timber** - [Apache-2.0](https://github.com/JakeWharton/timber)
-- **ACRA** - [Apache-2.0](https://github.com/ACRA/acra)
-- **Kotest** - [Apache-2.0](https://kotest.io/)
-- **MockK** - [Apache-2.0](https://mockk.io/)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. By contributing, you
+agree that your contributions will be licensed under GPL-2.0.
 
 ## Acknowledgments
 
-This project is based on the work of the Jellyfin Contributors. Special thanks to all the developers and community members who have contributed to the Jellyfin Android TV project.
+- [Jellyfin](https://jellyfin.org/) — the upstream project and all its
+  contributors (1,044 authors across 9,000+ commits)
+- [Sam42a](https://github.com/Sam42a) — creator of DUNE, the intermediate fork
+- [OLED theme](https://github.com/LitCastVlog/jellyfin-androidtv-OLED) — basis
+  for the OLED-optimized dark mode
 
 ## License
 
-This project is licensed under the **GNU General Public License v2.0 (GPL-2.0)**. See the [LICENSE](LICENSE) file for details.
+Licensed under [GPL-2.0](LICENSE). See [NOTICE](NOTICE) for full copyright
+attribution and [FORK.md](FORK.md) for fork history.

@@ -1,3 +1,5 @@
+// Copyright (C) 2025-2026 Sam42a (DUNE), sndstrm Contributors
+// SPDX-License-Identifier: GPL-2.0-or-later
 import android.graphics.*
 import android.widget.ImageButton
 import android.widget.ImageView

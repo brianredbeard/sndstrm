@@ -354,7 +354,6 @@
     <string name="lbl_remove_users">Questo rimuoverà anche tutti gli utenti associati</string>
     <string name="lbl_manage_servers">Gestisci i server</string>
     <string name="pref_default_rating">Tipo di rating preferito</string>
-    <string name="login_help_description">Jellyfin ha bisogno di un server a cui connettersi. Visita la nostra documentazione su docs.jellyfin.org o scansiona il codice QR per iniziare con Jellyfin.</string>
     <string name="login_help_title">Hai bisogno d\'aiuto\?</string>
     <string name="connect_manually_by_address">Inserisci l\'indirizzo del server</string>
     <string name="discovered_servers_empty">Nessun server trovato nella rete locale.</string>
@@ -665,7 +664,7 @@
     <string name="pref_subtitles_vertical_offset_center">Centra</string>
     <string name="media_image">Immagine multimediale</string>
     <string name="profile_picture">Immagine del profilo</string>
-    <string name="app_name">DUNE</string>
+    <string name="app_name">sndstrm</string>
     <string name="error_occurred">Si è verificato un errore. Riprova.</string>
     <string name="no_results_found">Nessun risultato trovato</string>
     <string name="pref_theme_basic">Basic (Dark Low-End)</string>
@@ -698,7 +697,7 @@
     <string name="show_family_row">Mostra riga Famiglia</string>
     <string name="show_horror_row">Mostra riga Horror</string>
     <string name="show_fantasy_row">Mostra riga Fantasy</string>
-    <string name="exit_app_title">Uscita DUNE</string>
+    <string name="exit_app_title">Uscita sndstrm</string>
     <string name="exit_app_message">Sei sicuro di voler uscire?</string>
     <string name="yes">Sì</string>
     <string name="no">No</string>

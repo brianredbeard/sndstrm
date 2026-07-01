@@ -21,7 +21,7 @@ android {
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
 
 		// Release version
-		applicationId = "dune.enhanced.tv"
+		applicationId = "tv.sndstrm.app"
 		versionName = project.getVersionName()
 		versionCode = getVersionCode(versionName!!)
 	}
@@ -82,13 +82,13 @@ android {
 
 		create("enhanced") {
 			dimension = "variant"
-			applicationId = "Dune.enhanced.tv"
+			applicationId = "tv.sndstrm.enhanced"
 
 			// Set specific version name for enhanced variant
 			versionName = "0.1.1"
 
 			// Set app name for the enhanced version
-			resValue("string", "app_name_release", "DUNE")
+			resValue("string", "app_name_release", "sndstrm")
 
 			// Add required string resources that are referenced in XML files
 			resValue("string", "app_id", applicationId!!)
@@ -112,9 +112,9 @@ android {
 		variant.outputs.all {
 			val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
 			if (variantName == "enhanced") {
-				output.outputFileName = "Dune.androidtv-0.1.1.apk"
+				output.outputFileName = "sndstrm-androidtv-0.1.1.apk"
 			} else {
-				output.outputFileName = "Dune.androidtv-${versionName}.apk"
+				output.outputFileName = "sndstrm-androidtv-${versionName}.apk"
 			}
 		}
 	}
@@ -137,14 +137,14 @@ val versionTxt by tasks.registering {
 // Simple task to build the enhanced version
 tasks.register("buildEnhanced") {
 	group = "build"
-	description = "Builds the enhanced version with package ID: Dune.enhanced.tv"
+	description = "Builds the enhanced version with package ID: tv.sndstrm.enhanced"
 	dependsOn("assembleEnhancedRelease")
 	doLast {
 		println("\nBuilding Enhanced version with:")
-		println("Package ID: Dune.enhanced.tv")
+		println("Package ID: tv.sndstrm.enhanced")
 		println("Version: 0.1.1")
-		println("App Name: DUNE")
-		println("Filename: Dune.androidtv-0.1.1.apk")
+		println("App Name: sndstrm")
+		println("Filename: sndstrm-androidtv-0.1.1.apk")
 		println("The APK will be available in: app/build/outputs/apk/enhanced/release/")
 	}
 }

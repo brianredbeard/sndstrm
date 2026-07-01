@@ -1,17 +1,18 @@
-Dune - Jellyfin Android TV Client
-Copyright (C) 2023-2025 Sam42a
+sndstrm - Jellyfin Android TV Client
+Copyright (C) 2025-2026 sndstrm Contributors
 
-This is a fork of Jellyfin for Android TV, which is free and open source software
-distributed under the terms of the GNU General Public License v2.0 (GPL-2.0).
+This is a fork of Jellyfin for Android TV, originally developed by Sam42a as
+"DUNE" and subsequently forked to continue maintenance and GPL-2.0 compliance.
 
 ---
 
 Original Jellyfin Android TV:
-Copyright (C) 2017-2025 Jellyfin Contributors
-
-This product includes software developed by the Jellyfin Project (https://jellyfin.org/).
-Original source code and NOTICE file available at:
+Copyright (C) 2014-2025 Jellyfin Contributors
 https://github.com/jellyfin/jellyfin-androidtv
+
+DUNE (intermediate fork):
+Copyright (C) 2025-2026 Sam42a
+https://github.com/Sam42a/DUNE
 
 ---
 

@@ -1,6 +1,6 @@
-# Contributing to Dune (Jellyfin Android TV Client)
+# Contributing to sndstrm
 
-Thank you for considering contributing to Dune! We welcome all contributions that help improve this project.
+Thank you for considering contributing to sndstrm! We welcome all contributions that help improve this project.
 
 ## Code of Conduct
 
@@ -11,7 +11,7 @@ This project adheres to the [Jellyfin Code of Conduct](https://github.com/jellyf
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally
    ```
-   git clone https://github.com/your-username/DUNE.git
+   git clone https://github.com/your-username/sndstrm.git
    ```
 3. Create a new **feature branch** for your changes
    ```
@@ -25,22 +25,30 @@ This project adheres to the [Jellyfin Code of Conduct](https://github.com/jellyf
    ```
    git push origin feature/your-feature-name
    ```
-6. Open a **Pull Request** against the `main` branch
+6. Open a **Pull Request** against the `master` branch
 
 ## Development Setup
 
 1. Open the project in Android Studio
-2. Ensure you have the latest Android SDK and build tools installed
+2. Ensure you have JDK 21 and the latest Android SDK installed
 3. Sync the project with Gradle files
 4. Build and run the project
+
+## Upstream Sync
+
+This project tracks [jellyfin/jellyfin-androidtv](https://github.com/jellyfin/jellyfin-androidtv) as `upstream`. To sync:
+
+```bash
+git fetch upstream
+git merge upstream/release-0.19.z
+```
 
 ## Code Style
 
 - Follow the official [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- Use 4 spaces for indentation
+- Use tabs for indentation (matching upstream)
 - Keep lines under 120 characters
 - Write clear, concise commit messages
-- Document complex logic with comments
 
 ## Reporting Issues
 
