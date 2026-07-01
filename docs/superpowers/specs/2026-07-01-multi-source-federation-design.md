@@ -70,8 +70,12 @@ One playable version of a content item:
 - `resolution: String` (480p, 720p, 1080p, 4k)
 - `bitrate: Int` (kbps)
 - `hash: String?` (sha256 content hash, feed sources only — see Section 6 for limitations)
+- `mediaSourceId: String?` (Jellyfin media source ID, null for feed sources. Used for stable cache keying and playback session binding.)
+- `streamIndex: Int?` (Jellyfin stream index within media source, null for feed sources. Together with mediaSourceId, uniquely identifies a specific stream variant on a server.)
 - `canDirectPlay: Boolean` (computed against device capabilities)
 - `isLive: Boolean`
+
+The combination of `sourceRef.sourceId + mediaSourceId + streamIndex` forms the stable Jellyfin cache key used in Section 6 (`{serverId}:{itemId}:{mediaSourceId}:{streamIndex}`), where `serverId` and `itemId` come from the `SourceRef`.
 
 ### PlayableResolver
 
@@ -144,15 +148,17 @@ The current codebase assumes one active `Session`, one bound `ApiClient`, and on
 When the same title exists on multiple sources, group into a single `ContentItem` with multiple `SourceRef` and `StreamSource` entries.
 
 **Matching strategy (configurable, default: provider-first):**
-1. Match on `canonicalId` — same provider, same content type, same provider ID (e.g., `tmdb:movie:10331` matches `tmdb:movie:10331` but NOT `tmdb:tv:10331`). Episodes follow the canonical ID rules from Section 1 (episode-level provider ID preferred, series-derived fallback).
+1. Compare the full normalized provider identity set across items. Two items match if they share ANY provider ID with the same content type (e.g., item A has `{tmdb:movie:10331, imdb:movie:tt0063350}` and item B has `{imdb:movie:tt0063350}` — they match on IMDb even though B lacks TMDb). After merging, the combined item inherits the union of all provider IDs, and `canonicalId` is chosen by priority: TMDb > IMDb > TVDb > source-specific.
 2. Fallback: fuzzy title + year + content type matching (Levenshtein distance ≤ 2, year ±1, same ContentType). A movie and a TV series with the same name do not match.
 3. No match: items remain separate (no false deduplication)
 
+Episodes follow the canonical ID rules from Section 1 (episode-level provider ID preferred, series-derived fallback).
+
 **Behavior:**
-- Aggregated surfaces show one card per unique title with "2+" source badge
-- Source-owned rows (continue watching, next up) are never deduped — they show per-server state
+- Aggregated surfaces (search, recently added, recommendations) show one card per unique title with "2+" source badge
+- Source-owned rows (next up, active recordings) are never deduped — they show per-server state
+- "Continue Watching" behavior depends on the watch state tier (see Section 5): in Tier A, each server's continue watching row is shown separately. In Tier B, a single unified "Continue Watching" row replaces the per-server rows, merging Jellyfin resume state with local DB feed resume state, deduped by canonical_id, sorted by last_played.
 - Deduplication runs on background coroutine with debounced cache
-- `ContentItem.canonicalId` is the dedup key — derived from best provider ID
 
 ---
 
@@ -344,7 +350,7 @@ Empty string `source_id` represents the unified/merged row. Non-empty values rep
 - Items without provider IDs use `{sourceId}:{itemId}` as canonical_id — these cannot deduplicate but still participate in local tracking
 - Episodes: if the episode itself has a provider ID, use it (`tmdb:episode:62085`). Otherwise, derive from series: `tmdb:tv:1396:S02E05`. Specials use `S00E{n}`. Sources with different season/episode numbering (e.g., absolute ordering vs aired ordering) will not deduplicate — this is intentional to avoid false matches.
 - When Jellyfin reports progress AND local DB has progress, Jellyfin wins (it's the authoritative source for its own content). Local DB fills in for feed items and cross-source resume.
-- "Continue watching" row: query Jellyfin servers for their resume items UNION local DB for feed resume items, dedup by canonical_id, sort by last_played
+- "Continue watching" row: in Tier B, a single unified row replaces per-server continue watching rows. Query all Jellyfin servers for resume items UNION local DB for feed resume items, dedup by canonical_id, sort by last_played. This is a Tier B behavioral change — in Tier A, continue watching rows remain per-server.
 
 **Data never leaves the device. Survives app restarts, not app reinstalls.**
 
