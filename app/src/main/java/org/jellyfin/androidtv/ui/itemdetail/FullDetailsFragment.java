@@ -155,6 +155,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     final Lazy<PlaybackHelper> playbackHelper = inject(PlaybackHelper.class);
     private final Lazy<ImageHelper> imageHelper = inject(ImageHelper.class);
     private final Lazy<InteractionTrackerViewModel> interactionTracker = inject(InteractionTrackerViewModel.class);
+    private ThemeSongs themeSongs;
 
     @Nullable
     @Override
@@ -285,12 +286,14 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     public void onPause() {
         super.onPause();
         stopClock();
+        if (themeSongs != null) themeSongs.fadeOutAndStop();
     }
 
     @Override
     public void onStop() {
         super.onStop();
         stopClock();
+        if (themeSongs != null) themeSongs.stop();
     }
 
     @Override
@@ -492,6 +495,8 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
         mBaseItem = item;
         backgroundService.getValue().setBackground(item);
+        if (themeSongs == null) themeSongs = new ThemeSongs(requireContext());
+        themeSongs.playThemeSong(item, true);
         if (mBaseItem != null) {
             if (mChannelId != null) {
                 mBaseItem = JavaCompat.copyWithParentId(mBaseItem, mChannelId);
