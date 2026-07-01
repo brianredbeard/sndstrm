@@ -7,10 +7,15 @@ import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.koin.compose.koinInject
 
 @Composable
 fun JellyfinTheme(
-	colorScheme: ColorScheme = JellyfinTheme.colorScheme,
+	colorScheme: ColorScheme = run {
+		val userPreferences = koinInject<UserPreferences>()
+		colorScheme(userPreferences[UserPreferences.appTheme])
+	},
 	shapes: Shapes = JellyfinTheme.shapes,
 	typography: Typography = JellyfinTheme.typography,
 	content: @Composable () -> Unit
