@@ -112,6 +112,8 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var preferExoPlayerFfmpeg = booleanPreference("exoplayer_prefer_ffmpeg", defaultValue = false)
 
+		var hardwareAccelerationEnabled = booleanPreference("hardware_acceleration_enabled", defaultValue = true)
+
 		/* Playback - Audio related */
 		/**
 		 * Preferred behavior for audio streaming.
