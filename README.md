@@ -1,89 +1,99 @@
-<h1 align="center">Jellyfin Android TV</h1>
-<h3 align="center">Part of the <a href="https://jellyfin.org">Jellyfin Project</a></h3>
+# sndstrm
 
----
+A maintained fork of the [Jellyfin](https://jellyfin.org/) Android TV client
+with enhanced UI/UX and additional features.
 
-<p align="center">
-<img alt="Logo banner" src="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/banner-logo-solid.svg?sanitize=true"/>
-<br/><br/>
-<a href="https://github.com/jellyfin/jellyfin-androidtv">
-<img alt="GPL 2.0 License" src="https://img.shields.io/github/license/jellyfin/jellyfin-androidtv.svg"/>
-</a>
-<a href="https://github.com/jellyfin/jellyfin-androidtv/releases">
-<img alt="Current Release" src="https://img.shields.io/github/release/jellyfin/jellyfin-androidtv.svg"/>
-</a>
-<a href="https://translate.jellyfin.org/projects/jellyfin-android/jellyfin-androidtv/">
-<img alt="Translation Status" src="https://translate.jellyfin.org/widgets/jellyfin-android/-/jellyfin-androidtv/svg-badge.svg"/>
-</a>
-<br/>
-<a href="https://opencollective.com/jellyfin">
-<img alt="Donate" src="https://img.shields.io/opencollective/all/jellyfin.svg?label=backers"/>
-</a>
-<a href="https://features.jellyfin.org">
-<img alt="Feature Requests" src="https://img.shields.io/badge/fider-vote%20on%20features-success.svg"/>
-</a>
-<a href="https://matrix.to/#/+jellyfin:matrix.org">
-<img alt="Chat on Matrix" src="https://img.shields.io/matrix/jellyfin:matrix.org.svg?logo=matrix"/>
-</a>
-<a href="https://www.reddit.com/r/jellyfin">
-<img alt="Join our Subreddit" src="https://img.shields.io/badge/reddit-r%2Fjellyfin-%23FF5700.svg"/>
-</a>
-<br/>
-<a href="https://play.google.com/store/apps/details?id=org.jellyfin.androidtv">
-<img width="153" alt="Jellyfin on Google Play" src="https://jellyfin.org/images/store-icons/google-play.png"/>
-</a>
-<a href="https://www.amazon.com/gp/aw/d/B07TX7Z725">
-<img width="153" alt="Jellyfin on Amazon Appstore" src="https://jellyfin.org/images/store-icons/amazon.png"/>
-</a>
-<a href="https://f-droid.org/en/packages/org.jellyfin.androidtv/">
-<img width="153" alt="Jellyfin on F-Droid" src="https://jellyfin.org/images/store-icons/fdroid.png"/>
-</a>
-<br/>
-<a href="https://repo.jellyfin.org/releases/client/androidtv/">Download archive</a>
-</p>
+> **This is an unofficial, community-maintained fork.** It is not affiliated
+> with the Jellyfin project. The official client is at
+> [jellyfin/jellyfin-androidtv](https://github.com/jellyfin/jellyfin-androidtv).
 
-Jellyfin Android TV is a Jellyfin client for Android TV, Nvidia Shield, and Amazon Fire TV devices.
-We welcome all contributions and pull requests! If you have a larger feature in mind please open an
-issue so we can discuss the implementation before you start. 
+## Lineage
 
-## Translating
+sndstrm continues the work of [DUNE](https://github.com/Sam42a/DUNE) (by
+Sam42a), itself a fork of the official Jellyfin Android TV client. Full history
+is documented in [FORK.md](FORK.md).
 
-Translations can be improved very easily from our
-[Weblate](https://translate.jellyfin.org/projects/jellyfin-android/jellyfin-androidtv) instance.
-Look through the following graphic to see if your native language could use some work!
+## Features
 
-<a href="https://translate.jellyfin.org/engage/jellyfin-android/">
-<img alt="Detailed Translation Status" src="https://translate.jellyfin.org/widgets/jellyfin-android/-/jellyfin-androidtv/multi-auto.svg"/>
-</a>
+### Visual & Interface
+- Redesigned home screen with improved content hierarchy
+- OLED-optimized dark mode and multiple theme options
+- Dynamic color extraction from backdrop images
+- DreamView screensaver with smooth transitions
+- Enhanced login screen with default avatars and visual feedback
 
-## Build Process
+### Home Screen
+- Customizable home sections and genre rows
+- "Because You Watched" suggested content row
+- Combined continue watching / next up row
+- Vertical alphabet sidebar for grid browsing
+- Launcher channel integration
 
-### Dependencies
+### Playback
+- Episode selector in playback overlay
+- Hardware acceleration toggle
+- Audio downmix auto-fallback
+- Chapter support in overlay
+- Configurable skip duration
 
-- Android Studio
+### Subtitles
+- Subtitle download functionality
+- TX3G/MOV_TEXT subtitle support
+- Default subtitle language preference
+- Subtitle preview
 
-### Build
+### Settings & Customization
+- Configurable image disk cache size
+- In-app language selector
+- Genre manager with sorting preferences
+- Preferences UI migrated to Jetpack Compose
 
-1. Clone or download this repository
+## Building from Source
 
-   ```sh
-   git clone https://github.com/jellyfin/jellyfin-androidtv.git
-   cd jellyfin-androidtv
-   ```
+### Requirements
+- Android Studio (latest stable)
+- JDK 21
+- Android SDK with API level matching `compileSdk` in `gradle/libs.versions.toml`
 
-2. Open the project in Android Studio and run it from there or build an APK directly through Gradle:
+### Build Instructions
 
-   ```sh
-   ./gradlew assembleDebug
-   ```
-   
-   Add the Android SDK to your PATH environment variable or create the ANDROID_SDK_ROOT variable for
-   this to work.
+```bash
+git clone https://github.com/brianredbeard/sndstrm.git
+cd sndstrm
+./gradlew assembleStandardDebug
+```
 
-### Deploy to device/emulator
+For the enhanced variant (separate package ID, can be installed alongside
+official Jellyfin):
 
-   ```sh
-   ./gradlew installDebug
-   ```
+```bash
+./gradlew buildEnhanced
+```
 
-*You can also replace the "Debug" with "Release" to get an optimized release binary.*
+### Install on Device
+
+```bash
+# Debug build
+adb install app/build/outputs/apk/standard/debug/sndstrm-androidtv-*.apk
+
+# Enhanced build
+adb install app/build/outputs/apk/enhanced/release/sndstrm-androidtv-0.1.1.apk
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. By contributing, you
+agree that your contributions will be licensed under GPL-2.0.
+
+## Acknowledgments
+
+- [Jellyfin](https://jellyfin.org/) — the upstream project and all its
+  contributors (1,044 authors across 9,000+ commits)
+- [Sam42a](https://github.com/Sam42a) — creator of DUNE, the intermediate fork
+- [OLED theme](https://github.com/LitCastVlog/jellyfin-androidtv-OLED) — basis
+  for the OLED-optimized dark mode
+
+## License
+
+Licensed under [GPL-2.0](LICENSE). See [NOTICE](NOTICE) for full copyright
+attribution and [FORK.md](FORK.md) for fork history.
