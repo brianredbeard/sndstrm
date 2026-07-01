@@ -5,6 +5,9 @@
     <string name="app_name">sndstrm</string>
     <string name="app_name_release" translatable="false" tools:ignore="UnusedResources">sndstrm</string>
     <string name="app_name_debug" translatable="false" tools:ignore="UnusedResources">sndstrm Debug</string>
+    <string name="app_id" translatable="false">tv.sndstrm.app</string>
+    <string name="app_search_suggest_authority" translatable="false">tv.sndstrm.app.content</string>
+    <string name="app_search_suggest_intent_data" translatable="false">content://tv.sndstrm.app.content/intent</string>
 
     <!-- General UI Labels -->
     <string name="loading">Loading…</string>
@@ -678,6 +681,7 @@
     <!-- Grid & Layout -->
     <string name="grid_direction">Grid direction</string>
     <string name="grid_direction_vertical">Vertical</string>
+    <string name="grid_direction_horizontal">Horizontal</string>
     <string name="grid_direction_list">List</string>
     <string name="enable_smart_view">Enable smart screen</string>
     <string name="enable_smart_view_description">Smart screen shows relevant items instead of a grid</string>

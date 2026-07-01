@@ -41,6 +41,27 @@ class UserSettingPreferences(context: Context) : SharedPreferenceStore(
 	// Archive.org fallback preference
 	val themeSongsArchiveFallback = booleanPreference("themeSongsArchiveFallback", true)
 
+	// Genre row visibility
+	val showSuggestedMoviesRow = booleanPreference("showSuggestedMoviesRow", true)
+	val showCollectionsRow = booleanPreference("showCollectionsRow", false)
+	val showSciFiRow = booleanPreference("showSciFiRow", false)
+	val showComedyRow = booleanPreference("showComedyRow", false)
+	val showRomanceRow = booleanPreference("showRomanceRow", false)
+	val showAnimationRow = booleanPreference("showAnimationRow", false)
+	val showActionRow = booleanPreference("showActionRow", false)
+	val showActionAdventureRow = booleanPreference("showActionAdventureRow", false)
+	val showDocumentaryRow = booleanPreference("showDocumentaryRow", false)
+	val showRealityRow = booleanPreference("showRealityRow", false)
+	val showFamilyRow = booleanPreference("showFamilyRow", false)
+	val showHorrorRow = booleanPreference("showHorrorRow", false)
+	val showFantasyRow = booleanPreference("showFantasyRow", false)
+	val showHistoryRow = booleanPreference("showHistoryRow", false)
+	val showMusicRow = booleanPreference("showMusicRow", false)
+	val showMysteryRow = booleanPreference("showMysteryRow", false)
+	val showThrillerRow = booleanPreference("showThrillerRow", false)
+	val showWarRow = booleanPreference("showWarRow", false)
+	val showMusicVideosRow = booleanPreference("showMusicVideosRow", false)
+
 	// Media folder display options
     val useExtraSmallMediaFolders = booleanPreference("useExtraSmallMediaFolders", true)
     val showLiveTvButton = booleanPreference("show_live_tv_button", false)
