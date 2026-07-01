@@ -1,3 +1,6 @@
+// Original work: Copyright (C) 2014-2025 Jellyfin Contributors
+// Modifications:  Copyright (C) 2025-2026 Sam42a (DUNE), sndstrm Contributors
+// SPDX-License-Identifier: GPL-2.0-or-later
 package org.jellyfin.androidtv.util.profile
 
 import android.content.Context
@@ -71,9 +74,9 @@ fun createDeviceProfileReport(
 ) = buildMarkdown {
 	// Header
 	appendLine("---")
-	appendLine("client: Jellyfin for Android TV")
+	appendLine("client: sndstrm for Android TV")
 	appendLine("client_version: ${BuildConfig.VERSION_NAME}")
-	appendLine("client_repository: https://github.com/jellyfin/jellyfin-androidtv")
+	appendLine("client_repository: https://github.com/brianredbeard/sndstrm")
 	appendLine("type: media_capabilities_report")
 	appendLine("format: markdown")
 	appendLine("---")
