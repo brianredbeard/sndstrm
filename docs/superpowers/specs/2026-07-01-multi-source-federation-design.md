@@ -144,8 +144,8 @@ The current codebase assumes one active `Session`, one bound `ApiClient`, and on
 When the same title exists on multiple sources, group into a single `ContentItem` with multiple `SourceRef` and `StreamSource` entries.
 
 **Matching strategy (configurable, default: provider-first):**
-1. Match on TMDb/IMDb/TVDb IDs (exact)
-2. Fallback: fuzzy title + year matching (Levenshtein distance ≤ 2, year ±1)
+1. Match on `canonicalId` — same provider, same content type, same provider ID (e.g., `tmdb:movie:10331` matches `tmdb:movie:10331` but NOT `tmdb:tv:10331`). Episodes follow the canonical ID rules from Section 1 (episode-level provider ID preferred, series-derived fallback).
+2. Fallback: fuzzy title + year + content type matching (Levenshtein distance ≤ 2, year ±1, same ContentType). A movie and a TV series with the same name do not match.
 3. No match: items remain separate (no false deduplication)
 
 **Behavior:**
@@ -340,7 +340,7 @@ Empty string `source_id` represents the unified/merged row. Non-empty values rep
 
 **Key design decisions:**
 - Keyed by `canonical_id` (provider-derived) for cross-source unification
-- `source_id` is NULL for the unified row, non-NULL for source-specific overrides
+- `source_id` is empty string (`''`) for the unified row, non-empty for source-specific overrides (matches schema `DEFAULT ''`)
 - Items without provider IDs use `{sourceId}:{itemId}` as canonical_id — these cannot deduplicate but still participate in local tracking
 - Episodes: if the episode itself has a provider ID, use it (`tmdb:episode:62085`). Otherwise, derive from series: `tmdb:tv:1396:S02E05`. Specials use `S00E{n}`. Sources with different season/episode numbering (e.g., absolute ordering vs aired ordering) will not deduplicate — this is intentional to avoid false matches.
 - When Jellyfin reports progress AND local DB has progress, Jellyfin wins (it's the authoritative source for its own content). Local DB fills in for feed items and cross-source resume.
@@ -407,7 +407,8 @@ Stream entries from feed sources include a `hash` field (sha256) computed at bui
 - Complete hits: play from local file
 - Partial hits: resume download via HTTP Range header from last byte, play when sufficient buffer available
 - Feed items with hashes: cached by hash (cross-URL dedup)
-- Jellyfin items and hashless feed items: cached by URL (no cross-source dedup, but still avoids re-download)
+- Jellyfin items: cached by stable key `{serverId}:{itemId}:{mediaSourceId}:{streamIndex}` — NOT by URL, since Jellyfin stream URLs contain session tokens, transcode parameters, and other ephemeral query strings that would cause cache misses or duplicates
+- Hashless feed items: cached by URL (direct stream URLs are stable for feed content)
 
 ### Cache Management (Settings → Storage → Content Cache)
 
@@ -465,7 +466,7 @@ Each phase is independently shippable and testable.
 
 ### Phase 5: Content-Addressed Caching & P2P
 
-- Content hash integration in feed protocol (feed sources only; Jellyfin cache uses URL/media-source identity as key — see Section 6)
+- Content hash integration in feed protocol (feed sources only; Jellyfin cache uses stable `{serverId}:{itemId}:{mediaSourceId}:{streamIndex}` key — see Section 6)
 - Local content cache with hash-based deduplication
 - Optional BitTorrent seeding for cached public content
 - **Result:** Reduced bandwidth, offline playback, community distribution
