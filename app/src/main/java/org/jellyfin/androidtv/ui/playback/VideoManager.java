@@ -11,6 +11,7 @@ import android.media.audiofx.DynamicsProcessing;
 import android.media.audiofx.DynamicsProcessing.Limiter;
 import android.media.audiofx.Equalizer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -18,8 +19,6 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.core.graphics.TypefaceCompat;
-import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
@@ -41,10 +40,12 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.exoplayer.util.EventLogger;
 import androidx.media3.extractor.DefaultExtractorsFactory;
+import androidx.media3.extractor.ExtractorsFactory;
 import androidx.media3.extractor.ts.TsExtractor;
 import androidx.media3.ui.AspectRatioFrameLayout;
 import androidx.media3.ui.CaptionStyleCompat;
 import androidx.media3.ui.PlayerView;
+import androidx.core.graphics.TypefaceCompat;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
@@ -61,6 +62,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import io.github.peerless2012.ass.media.AssHandler;
+import io.github.peerless2012.ass.media.factory.AssRenderersFactory;
+import io.github.peerless2012.ass.media.kt.AssPlayerKt;
+import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory;
+import io.github.peerless2012.ass.media.type.AssRenderType;
+import io.github.peerless2012.ass.media.widget.AssSubtitleView;
 import timber.log.Timber;
 
 @OptIn(markerClass = UnstableApi.class)
@@ -90,7 +97,10 @@ public class VideoManager {
         _helper = helper;
         nightModeEnabled = userPreferences.get(UserPreferences.Companion.getAudioNightMode());
 
-        mExoPlayer = configureExoplayerBuilder(activity).build();
+        boolean assDirectPlay = userPreferences.get(UserPreferences.Companion.getAssDirectPlay());
+        AssHandler assHandler = assDirectPlay ? new AssHandler(AssRenderType.OVERLAY) : null;
+
+        mExoPlayer = configureExoplayerBuilder(activity, assHandler).build();
 
         if (userPreferences.get(UserPreferences.Companion.getDebuggingEnabled())) {
             mExoPlayer.addAnalyticsListener(new EventLogger());
@@ -101,7 +111,7 @@ public class VideoManager {
             mExoPlayer.addAnalyticsListener(new AnalyticsListener() {
                 @Override
                 public void onAudioSessionIdChanged(AnalyticsListener.EventTime eventTime, int audioSessionId) {
-                    VideoManagerHelperKt.applyAudioNightmode(audioSessionId);
+                    enableAudioNightMode(audioSessionId);
                 }
             });
         }
@@ -109,18 +119,22 @@ public class VideoManager {
         mExoPlayerView = view.findViewById(R.id.exoPlayerView);
         mExoPlayerView.setPlayer(mExoPlayer);
         int strokeColor = userPreferences.get(UserPreferences.Companion.getSubtitleTextStrokeColor()).intValue();
-        int textWeight = userPreferences.get(UserPreferences.Companion.getSubtitlesTextWeight());
+        int textWeight = userPreferences.get(UserPreferences.Companion.getSubtitlesTextWeightValue());
         CaptionStyleCompat subtitleStyle = new CaptionStyleCompat(
                 userPreferences.get(UserPreferences.Companion.getSubtitlesTextColor()).intValue(),
                 userPreferences.get(UserPreferences.Companion.getSubtitlesBackgroundColor()).intValue(),
                 Color.TRANSPARENT,
                 Color.alpha(strokeColor) == 0 ? CaptionStyleCompat.EDGE_TYPE_NONE : CaptionStyleCompat.EDGE_TYPE_OUTLINE,
                 strokeColor,
-                TypefaceCompat.create(activity, Typeface.DEFAULT, textWeight, false)
+                TypefaceCompat.create(mActivity, Typeface.DEFAULT, textWeight, false)
         );
         mExoPlayerView.getSubtitleView().setFractionalTextSize(0.0533f * userPreferences.get(UserPreferences.Companion.getSubtitlesTextSize()));
-        mExoPlayerView.getSubtitleView().setBottomPaddingFraction(userPreferences.get(UserPreferences.Companion.getSubtitlesOffsetPosition()));
         mExoPlayerView.getSubtitleView().setStyle(subtitleStyle);
+
+        if (assHandler != null) {
+            assHandler.init(mExoPlayer);
+            mExoPlayerView.getSubtitleView().addView(new AssSubtitleView(mActivity, assHandler));
+        }
 
         mExoPlayer.addListener(new Player.Listener() {
             @Override
@@ -165,7 +179,7 @@ public class VideoManager {
             public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {
                 // discontinuity for reason internal usually indicates an error, and that the player will reset to its default timestamp
                 if (reason == Player.DISCONTINUITY_REASON_INTERNAL) {
-                    Timber.i("Caught player discontinuity (reason internal) - oldPos: %s newPos: %s", oldPosition.positionMs, newPosition.positionMs);
+                    Timber.d("Caught player discontinuity (reason internal) - oldPos: %s newPos: %s", oldPosition.positionMs, newPosition.positionMs);
                 }
             }
 
@@ -180,16 +194,21 @@ public class VideoManager {
             }
         });
     }
-
     public void subscribe(@NonNull PlaybackControllerNotifiable notifier) {
         mPlaybackControllerNotifiable = notifier;
     }
 
     private int determineExoPlayerExtensionRendererMode() {
-        if (userPreferences.get(UserPreferences.Companion.getPreferExoPlayerFfmpeg())) {
+        boolean hardwareAccelerationEnabled = userPreferences.get(UserPreferences.Companion.getHardwareAccelerationEnabled());
+        boolean preferFfmpeg = userPreferences.get(UserPreferences.Companion.getPreferExoPlayerFfmpeg());
+        Timber.i("Hardware acceleration setting: %s", hardwareAccelerationEnabled ? "ENABLED" : "DISABLED");
+
+        if (!hardwareAccelerationEnabled) {
             return DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER;
         }
-
+        if (preferFfmpeg) {
+            return DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER;
+        }
         return DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
     }
 
@@ -200,7 +219,7 @@ public class VideoManager {
      * @param context The associated context
      * @return A configured builder for Exoplayer
      */
-    private ExoPlayer.Builder configureExoplayerBuilder(Context context) {
+    private ExoPlayer.Builder configureExoplayerBuilder(Context context, AssHandler assHandler){
         ExoPlayer.Builder exoPlayerBuilder = new ExoPlayer.Builder(context);
         DefaultRenderersFactory defaultRendererFactory = new DefaultRenderersFactory(context);
         defaultRendererFactory.setEnableDecoderFallback(true);
@@ -221,13 +240,17 @@ public class VideoManager {
         extractorsFactory.setConstantBitrateSeekingEnabled(true);
         extractorsFactory.setConstantBitrateSeekingAlwaysEnabled(true);
         DefaultDataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(context, exoPlayerHttpDataSourceFactory);
-        exoPlayerBuilder.setRenderersFactory(defaultRendererFactory);
-        exoPlayerBuilder.setMediaSourceFactory(new DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory));
-
-        exoPlayerBuilder.setAudioAttributes(new AudioAttributes.Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                .build(), true);
+        if (assHandler != null) {
+            AssSubtitleParserFactory assSubtitleParserFactory = new AssSubtitleParserFactory(assHandler);
+            ExtractorsFactory assExtractorsFactory = AssPlayerKt.withAssMkvSupport(extractorsFactory, assSubtitleParserFactory, assHandler);
+            DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(dataSourceFactory, assExtractorsFactory);
+            mediaSourceFactory.setSubtitleParserFactory(assSubtitleParserFactory);
+            exoPlayerBuilder.setMediaSourceFactory(mediaSourceFactory);
+            exoPlayerBuilder.setRenderersFactory(new AssRenderersFactory(assHandler, defaultRendererFactory));
+        } else {
+            exoPlayerBuilder.setRenderersFactory(defaultRendererFactory);
+            exoPlayerBuilder.setMediaSourceFactory(new DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory));
+        }
 
         return exoPlayerBuilder;
     }
@@ -336,6 +359,7 @@ public class VideoManager {
 
         Timber.i("Exo length in seek is: %d", getDuration());
         mExoPlayer.seekTo(pos);
+        mExoPlayer.setPlayWhenReady(true);
         return pos;
     }
 
@@ -386,7 +410,7 @@ public class VideoManager {
         }
     }
 
-    private int offsetStreamIndex(int index, boolean adjustByAdding, @Nullable List<org.jellyfin.sdk.model.api.MediaStream> allStreams) {
+    private int offsetStreamIndex(int index, boolean adjustByAdding, boolean indexStartsAtOne, @Nullable List<org.jellyfin.sdk.model.api.MediaStream> allStreams) {
         if (index < 0 || allStreams == null)
             return -1;
 
@@ -403,6 +427,7 @@ public class VideoManager {
                 break;
             index += adjustByAdding ? 1 : -1;
         }
+        index += indexStartsAtOne ? (adjustByAdding ? -1 : 1) : 0;
 
         return index < 0 || index > allStreams.size() ? -1 : index;
     }
@@ -424,22 +449,26 @@ public class VideoManager {
             @C.TrackType int trackType = groupInfo.getType();
             TrackGroup group = groupInfo.getMediaTrackGroup();
             for (int i = 0; i < group.length; i++) {
+                // Individual track information.
+                Format trackFormat = group.getFormat(i);
                 if (trackType == chosenTrackType) {
                     if (groupInfo.isTrackSelected(i)) {
                         // we found the track, set to -1 first to handle failed int parsing
                         matchedIndex = -1;
-                        int id;
-                        try {
-                            if (group.id.contains(":")) {
-                                id = Integer.parseInt(group.id.split(":")[1]);
-                            } else {
-                                id = Integer.parseInt(group.id);
+                        if (trackFormat.id != null) {
+                            int id;
+                            try {
+                                if (trackFormat.id.contains(":")) {
+                                    id = Integer.parseInt(trackFormat.id.split(":")[1]);
+                                } else {
+                                    id = Integer.parseInt(trackFormat.id);
+                                }
+                            } catch (NumberFormatException e) {
+                                Timber.d("failed to parse track ID [%s]", trackFormat.id);
+                                break;
                             }
-                        } catch (NumberFormatException e) {
-                            Timber.w("failed to parse group ID [%s]", group.id);
-                            break;
+                            matchedIndex = id;
                         }
-                        matchedIndex = id;
                         break;
                     }
                 }
@@ -447,7 +476,7 @@ public class VideoManager {
         }
 
         // offset the stream index to account for external streams
-        int exoTrackID = offsetStreamIndex(matchedIndex, true, allStreams);
+        int exoTrackID = offsetStreamIndex(matchedIndex, true, true, allStreams);
         if (exoTrackID < 0)
             return -1;
 
@@ -465,7 +494,7 @@ public class VideoManager {
         Optional<MediaStream> candidateOptional = allStreams.stream().filter(stream -> stream.getIndex() == index && !stream.isExternal() && stream.getType() == streamType).findFirst();
         if (!candidateOptional.isPresent()) return false;
 
-        int exoTrackID = offsetStreamIndex(index, false, allStreams);
+        int exoTrackID = offsetStreamIndex(index, false, true, allStreams);
         if (exoTrackID < 0)
             return false;
 
@@ -493,23 +522,23 @@ public class VideoManager {
                 boolean isSelected = groupInfo.isTrackSelected(i);
                 Format trackFormat = group.getFormat(i);
 
-                Timber.i("track %s group %s/%s trackType %s label %s mime %s isSelected %s isSupported %s",
+                Timber.d("track %s group %s/%s trackType %s label %s mime %s isSelected %s isSupported %s",
                         trackFormat.id, i + 1, group.length, trackType, trackFormat.label, trackFormat.sampleMimeType, isSelected, isSupported);
 
-                if (trackType != chosenTrackType)
+                if (trackType != chosenTrackType || trackFormat.id == null)
                     continue;
 
                 int id;
                 try {
-                    if (group.id.contains(":")) {
-                        id = Integer.parseInt(group.id.split(":")[1]);
+                    if (trackFormat.id.contains(":")) {
+                        id = Integer.parseInt(trackFormat.id.split(":")[1]);
                     } else {
-                        id = Integer.parseInt(group.id);
+                        id = Integer.parseInt(trackFormat.id);
                     }
                     if (id != exoTrackID)
                         continue;
                 } catch (NumberFormatException e) {
-                    Timber.w("failed to parse group ID [%s]", group.id);
+                    Timber.d("failed to parse track ID [%s]", trackFormat.id);
                     continue;
                 }
 
@@ -523,7 +552,7 @@ public class VideoManager {
                     return true;
                 }
 
-                Timber.i("matched exoplayer track %s to mediaStream track %s", trackFormat.id, index);
+                Timber.d("matched exoplayer track %s to mediaStream track %s", trackFormat.id, index);
                 matchedGroup = group;
             }
         }
@@ -536,7 +565,7 @@ public class VideoManager {
             mExoPlayerSelectionParams.setOverrideForType(new TrackSelectionOverride(matchedGroup, 0));
             mExoPlayer.setTrackSelectionParameters(mExoPlayerSelectionParams.build());
         } catch (Exception e) {
-            Timber.w("Error setting track selection");
+            Timber.d("Error setting track selection");
             return false;
         }
         return true;
@@ -567,7 +596,6 @@ public class VideoManager {
     }
 
     private void releasePlayer() {
-        _helper.setScreensaverLock(false);
         if (mExoPlayer != null) {
             mExoPlayerView.setPlayer(null);
             mExoPlayer.release();
@@ -632,6 +660,42 @@ public class VideoManager {
     private void stopProgressLoop() {
         if (progressLoop != null) {
             mHandler.removeCallbacks(progressLoop);
+        }
+    }
+
+    private void enableAudioNightMode(int audioSessionId) {
+        Timber.i("Enabling audio night mode for session %d", audioSessionId);
+        if (mEqualizer != null) mEqualizer.release();
+        if (mDynamicsProcessing != null) mDynamicsProcessing.release();
+
+        // Equaliser variables.
+        short eqDefault = (short) 0;
+        short eqSmallBoost = (short) 2;
+        short eqBigBoost = (short) 3;
+        mEqualizer = new Equalizer(0, audioSessionId);
+
+        // Compressor variables.
+        int attackTime = 30;
+        int releaseTime = 300;
+        int ratio = 10;
+        int threshold = -24;
+        int postGain = 3;
+
+        // Mid range boost to make dialogue louder.
+        mEqualizer.setBandLevel((short) 0, eqDefault);
+        mEqualizer.setBandLevel((short) 1, eqSmallBoost);
+        mEqualizer.setBandLevel((short) 2, eqBigBoost);
+        mEqualizer.setBandLevel((short) 3, eqSmallBoost);
+        mEqualizer.setBandLevel((short) 4, eqDefault);
+        mEqualizer.setEnabled(true);
+
+        // Compression of audio (available >= android.P only).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mDynamicsProcessing = new DynamicsProcessing(audioSessionId);
+            mLimiter = new Limiter(true, true, 1, attackTime, releaseTime, ratio, threshold, postGain);
+            mLimiter.setEnabled(true);
+            mDynamicsProcessing.setLimiterAllChannelsTo(mLimiter);
+            mDynamicsProcessing.setEnabled(true);
         }
     }
 }

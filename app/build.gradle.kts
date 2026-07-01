@@ -6,6 +6,12 @@ plugins {
 	alias(libs.plugins.aboutlibraries)
 }
 
+java {
+	toolchain {
+		languageVersion.set(JavaLanguageVersion.of(21))
+	}
+}
+
 android {
 	namespace = "org.jellyfin.androidtv"
 	compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -24,63 +30,70 @@ android {
 		buildConfig = true
 		viewBinding = true
 		compose = true
+		dataBinding = true
 	}
 
 	compileOptions {
 		isCoreLibraryDesugaringEnabled = true
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
 	}
 
-	signingConfigs {
-		val keystoreFile = getProperty("keystore.file")
-		val keystorePassword = getProperty("keystore.password")
-		val signingKeyAlias = getProperty("signing.key.alias")
-		val signingKeyPassword = getProperty("signing.key.password")
+	// Configure Kotlin compiler options
+	kotlin {
+		jvmToolchain(21)
+	}
 
-		if (keystoreFile != null && keystorePassword != null && signingKeyAlias != null && signingKeyPassword != null) {
-			create("release") {
-				storeFile = file(keystoreFile)
-				storePassword = keystorePassword
-				keyAlias = signingKeyAlias
-				keyPassword = signingKeyPassword
-			}
+	tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+		compilerOptions {
+			jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+			freeCompilerArgs.add("-Xjvm-default=all")
 		}
 	}
 
-	dependenciesInfo {
-		includeInBundle = false
-		includeInApk = false
-	}
-
 	buildTypes {
-		release {
+		val release by getting {
 			isMinifyEnabled = false
-
-			// Set package names used in various XML files
-			resValue("string", "app_id", defaultConfig.applicationId!!)
-			resValue("string", "app_search_suggest_authority", "${defaultConfig.applicationId}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${defaultConfig.applicationId}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_release")
 
 			buildConfigField("boolean", "DEVELOPMENT", "false")
-
-			signingConfig = signingConfigs.findByName("release")
 		}
 
-		debug {
+		val debug by getting {
 			// Use different application id to run release and debug at the same time
 			applicationIdSuffix = ".debug"
-
-			// Set package names used in various XML files
-			resValue("string", "app_id", defaultConfig.applicationId + applicationIdSuffix)
-			resValue("string", "app_search_suggest_authority", "${defaultConfig.applicationId + applicationIdSuffix}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${defaultConfig.applicationId + applicationIdSuffix}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_debug")
 
 			buildConfigField("boolean", "DEVELOPMENT", (defaultConfig.versionCode!! < 100).toString())
+		}
+	}
+
+	// Define a build flavor for the enhanced version that can be installed alongside the original
+	flavorDimensions += listOf("variant")
+	productFlavors {
+		create("standard") {
+			dimension = "variant"
+			// Uses default applicationId
+		}
+
+		create("enhanced") {
+			dimension = "variant"
+			applicationId = "tv.sndstrm.enhanced"
+
+			// Set specific version name for enhanced variant
+			versionName = "0.1.1"
+
+			// Set app name for the enhanced version
+			resValue("string", "app_name_release", "sndstrm")
+
+			// Add required string resources that are referenced in XML files
+			resValue("string", "app_id", applicationId!!)
+			resValue("string", "app_search_suggest_authority", "${applicationId}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${applicationId}.content/intent")
 		}
 	}
 
@@ -91,14 +104,27 @@ android {
 		checkDependencies = true
 	}
 
+	// Configure output file names for APKs
+	applicationVariants.all {
+		val variant = this
+		val variantName = variant.name
+		val versionName = variant.versionName
+		variant.outputs.all {
+			val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+			if (variantName == "enhanced") {
+				output.outputFileName = "sndstrm-androidtv-0.1.1.apk"
+			} else {
+				output.outputFileName = "sndstrm-androidtv-${versionName}.apk"
+			}
+		}
+	}
+
 	testOptions.unitTests.all {
 		it.useJUnitPlatform()
 	}
 }
 
-base.archivesName.set("sndstrm-androidtv-v${project.getVersionName()}")
-
-tasks.register("versionTxt") {
+val versionTxt by tasks.registering {
 	val path = layout.buildDirectory.asFile.get().resolve("version.txt")
 
 	doLast {
@@ -108,7 +134,25 @@ tasks.register("versionTxt") {
 	}
 }
 
+// Simple task to build the enhanced version
+tasks.register("buildEnhanced") {
+	group = "build"
+	description = "Builds the enhanced version with package ID: tv.sndstrm.enhanced"
+	dependsOn("assembleEnhancedRelease")
+	doLast {
+		println("\nBuilding Enhanced version with:")
+		println("Package ID: tv.sndstrm.enhanced")
+		println("Version: 0.1.1")
+		println("App Name: sndstrm")
+		println("Filename: sndstrm-androidtv-0.1.1.apk")
+		println("The APK will be available in: app/build/outputs/apk/enhanced/release/")
+	}
+}
+
+
+
 dependencies {
+	implementation("androidx.compose.material:material:1.5.0")
 	// Jellyfin
 	implementation(projects.playback.core)
 	implementation(projects.playback.jellyfin)
@@ -128,11 +172,11 @@ dependencies {
 	// Kotlin
 	implementation(libs.kotlinx.coroutines)
 	implementation(libs.kotlinx.serialization.json)
+	implementation(kotlin("reflect"))
 
 	// Android(x)
 	implementation(libs.androidx.core)
 	implementation(libs.androidx.activity)
-	implementation(libs.androidx.activity.compose)
 	implementation(libs.androidx.fragment)
 	implementation(libs.androidx.fragment.compose)
 	implementation(libs.androidx.leanback.core)
@@ -148,7 +192,10 @@ dependencies {
 	implementation(libs.androidx.cardview)
 	implementation(libs.androidx.startup)
 	implementation(libs.bundles.androidx.compose)
-	implementation(libs.accompanist.permissions)
+	implementation("androidx.tv:tv-material:1.0.0")
+	implementation("androidx.palette:palette:1.0.0")
+	implementation("androidx.compose.material3:material3:1.2.1")
+	implementation("androidx.compose.material:material-icons-extended")
 
 	// Dependency Injection
 	implementation(libs.bundles.koin)
@@ -159,12 +206,21 @@ dependencies {
 	implementation(libs.androidx.media3.exoplayer.hls)
 	implementation(libs.androidx.media3.ui)
 	implementation(libs.jellyfin.androidx.media3.ffmpeg.decoder)
+	implementation(libs.libass.media3)
 
 	// Markdown
 	implementation(libs.bundles.markwon)
 
+	// Logging
+	implementation(libs.timber)
+	implementation(libs.slf4j.timber)
+
 	// Image utility
 	implementation(libs.bundles.coil)
+	implementation("com.github.bumptech.glide:glide:4.16.0")
+
+	// GIF support
+	implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.28")
 
 	// Crash Reporting
 	implementation(libs.bundles.acra)
@@ -176,7 +232,10 @@ dependencies {
 	implementation(libs.timber)
 	implementation(libs.slf4j.timber)
 
-	// Compatibility (desugaring)
+	// Network
+	implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation(libs.androidx.foundation.android)
+
 	coreLibraryDesugaring(libs.android.desugar)
 
 	// Testing

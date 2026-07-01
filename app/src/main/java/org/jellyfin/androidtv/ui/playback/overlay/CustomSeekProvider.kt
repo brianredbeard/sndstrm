@@ -10,9 +10,7 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.Disposable
 import coil3.request.ImageRequest
-import coil3.request.maxBitmapSize
 import coil3.request.transformations
-import coil3.size.Dimension
 import coil3.size.Size
 import coil3.toBitmap
 import org.jellyfin.androidtv.util.coil.SubsetTransformation
@@ -78,7 +76,6 @@ class CustomSeekProvider(
 		imageRequests[index] = imageLoader.enqueue(ImageRequest.Builder(context).apply {
 			data(url)
 			size(Size.ORIGINAL)
-			maxBitmapSize(Size(Dimension.Undefined, Dimension.Undefined))
 			httpHeaders(NetworkHeaders.Builder().apply {
 				set(
 					key = "Authorization",
@@ -95,8 +92,6 @@ class CustomSeekProvider(
 			transformations(SubsetTransformation(offsetX, offsetY, trickPlayInfo.width, trickPlayInfo.height))
 
 			target(
-				onStart = { _ -> callback.onThumbnailLoaded(null, index) },
-				onError = { _ -> callback.onThumbnailLoaded(null, index) },
 				onSuccess = { image ->
 					val bitmap = image.toBitmap()
 					callback.onThumbnailLoaded(bitmap, index)

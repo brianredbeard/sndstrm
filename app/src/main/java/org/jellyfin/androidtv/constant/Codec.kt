@@ -69,7 +69,6 @@ object Codec {
 		const val VP8 = "vp8"
 		const val VP9 = "vp9"
 		const val AV1 = "av1"
-		const val VC1 = "vc1"
 	}
 
 	object Subtitle {
@@ -77,6 +76,7 @@ object Codec {
 		const val DVBSUB = "dvbsub"
 		const val DVDSUB = "dvdsub"
 		const val IDX = "idx"
+		const val MOV_TEXT = "mov_text"
 		const val PGS = "pgs"
 		const val PGSSUB = "pgssub"
 		const val SMI = "smi"
@@ -84,6 +84,8 @@ object Codec {
 		const val SSA = "ssa"
 		const val SUB = "sub"
 		const val SUBRIP = "subrip"
+
+		const val TX3G = "tx3g"
 		const val VTT = "vtt"
 		const val SMIL = "smil"
 		const val TTML = "ttml"

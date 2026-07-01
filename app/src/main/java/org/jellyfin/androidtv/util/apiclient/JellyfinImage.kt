@@ -31,23 +31,16 @@ fun JellyfinImage.getUrl(
 	maxHeight: Int? = null,
 	fillWidth: Int? = null,
 	fillHeight: Int? = null,
-): String = when (source) {
-	JellyfinImageSource.USER -> api.imageApi.getUserImageUrl(
-		userId = item,
-		tag = tag,
-	)
-
-	else -> api.imageApi.getItemImageUrl(
-		itemId = item,
-		imageType = type,
-		tag = tag,
-		imageIndex = index,
-		maxWidth = maxWidth,
-		maxHeight = maxHeight,
-		fillWidth = fillWidth,
-		fillHeight = fillHeight,
-	)
-}
+): String = api.imageApi.getItemImageUrl(
+	itemId = item,
+	imageType = type,
+	tag = tag,
+	imageIndex = index,
+	maxWidth = maxWidth,
+	maxHeight = maxHeight,
+	fillWidth = fillWidth,
+	fillHeight = fillHeight,
+)
 
 enum class JellyfinImageSource {
 	ITEM,
@@ -55,7 +48,6 @@ enum class JellyfinImageSource {
 	ALBUM,
 	SERIES,
 	CHANNEL,
-	USER,
 }
 
 // UserDto
@@ -63,7 +55,7 @@ val UserDto.primaryImage
 	get() = primaryImageTag?.let { primaryImageTag ->
 		JellyfinImage(
 			item = id,
-			source = JellyfinImageSource.USER,
+			source = JellyfinImageSource.ITEM,
 			type = ImageType.PRIMARY,
 			tag = primaryImageTag,
 			blurHash = null,
@@ -123,10 +115,10 @@ val BaseItemDto.parentImages
 	}.associateBy { it.type }
 
 val BaseItemDto.parentBackdropImages
-	get() = parentBackdropItemId?.let { parentBackdropItemId ->
-		parentBackdropImageTags?.mapIndexed { index, tag ->
+	get() = parentBackdropImageTags?.mapIndexed { index, tag ->
+		parentBackdropItemId?.let { validParentBackdropItemId ->
 			JellyfinImage(
-				item = parentBackdropItemId,
+				item = validParentBackdropItemId,
 				source = JellyfinImageSource.PARENT,
 				type = ImageType.BACKDROP,
 				tag = tag,
@@ -135,13 +127,13 @@ val BaseItemDto.parentBackdropImages
 				index = index,
 			)
 		}
-	}.orEmpty()
+	}?.filterNotNull() ?: emptyList()
 
 val BaseItemDto.albumPrimaryImage
 	get() = albumPrimaryImageTag?.let { albumPrimaryImageTag ->
-		albumId?.let { albumId ->
+		albumId?.let { validAlbumId ->
 			JellyfinImage(
-				item = albumId,
+				item = validAlbumId,
 				source = JellyfinImageSource.ALBUM,
 				type = ImageType.PRIMARY,
 				tag = albumPrimaryImageTag,
@@ -154,9 +146,9 @@ val BaseItemDto.albumPrimaryImage
 
 val BaseItemDto.channelPrimaryImage
 	get() = channelPrimaryImageTag?.let { channelPrimaryImageTag ->
-		channelId?.let { channelId ->
+		channelId?.let { validChannelId ->
 			JellyfinImage(
-				item = channelId,
+				item = validChannelId,
 				source = JellyfinImageSource.CHANNEL,
 				type = ImageType.PRIMARY,
 				tag = channelPrimaryImageTag,
@@ -169,9 +161,9 @@ val BaseItemDto.channelPrimaryImage
 
 val BaseItemDto.seriesPrimaryImage
 	get() = seriesPrimaryImageTag?.let { seriesPrimaryImageTag ->
-		seriesId?.let { seriesId ->
+		seriesId?.let { validSeriesId ->
 			JellyfinImage(
-				item = seriesId,
+				item = validSeriesId,
 				source = JellyfinImageSource.SERIES,
 				type = ImageType.PRIMARY,
 				tag = seriesPrimaryImageTag,
@@ -184,9 +176,9 @@ val BaseItemDto.seriesPrimaryImage
 
 val BaseItemDto.seriesThumbImage
 	get() = seriesThumbImageTag?.let { seriesThumbImageTag ->
-		seriesId?.let { seriesId ->
+		seriesId?.let { validSeriesId ->
 			JellyfinImage(
-				item = seriesId,
+				item = validSeriesId,
 				source = JellyfinImageSource.SERIES,
 				type = ImageType.THUMB,
 				tag = seriesThumbImageTag,

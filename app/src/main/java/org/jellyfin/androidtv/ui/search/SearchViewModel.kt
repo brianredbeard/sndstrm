@@ -72,7 +72,7 @@ class SearchViewModel(
 
 					SearchResultGroup(stringRes, items)
 				}
-			}.awaitAll()
+			}.awaitAll().filter { it.items.isNotEmpty() }
 		}
 
 		return true

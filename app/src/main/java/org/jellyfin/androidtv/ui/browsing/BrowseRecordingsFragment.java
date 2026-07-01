@@ -20,14 +20,13 @@ import org.jellyfin.androidtv.ui.GridButton;
 import org.jellyfin.androidtv.ui.itemhandling.ItemRowAdapter;
 import org.jellyfin.androidtv.ui.presentation.GridButtonPresenter;
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter;
+import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.TimerInfoDto;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import timber.log.Timber;
 
 public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
     @Override
@@ -94,7 +93,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
             }
             return null;
         }, exception -> {
-            Timber.e(exception, "Failed to get Live TV recordings / timers");
+            Utils.showToast(getContext(), exception.getLocalizedMessage());
             return null;
         });
     }

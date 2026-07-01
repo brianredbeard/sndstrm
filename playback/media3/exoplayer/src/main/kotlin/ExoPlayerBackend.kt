@@ -26,6 +26,12 @@ import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.ui.SubtitleView
+import io.github.peerless2012.ass.media.AssHandler
+import io.github.peerless2012.ass.media.factory.AssRenderersFactory
+import io.github.peerless2012.ass.media.kt.withAssMkvSupport
+import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
+import io.github.peerless2012.ass.media.type.AssRenderType
+import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import org.jellyfin.playback.core.backend.BasePlayerBackend
 import org.jellyfin.playback.core.mediastream.MediaStream
 import org.jellyfin.playback.core.mediastream.PlayableMediaStream
@@ -51,12 +57,16 @@ class ExoPlayerBackend(
 	companion object {
 		const val TS_SEARCH_BYTES_LM = TsExtractor.TS_PACKET_SIZE * 1800
 		const val TS_SEARCH_BYTES_HM = TsExtractor.DEFAULT_TIMESTAMP_SEARCH_BYTES
-		const val MEDIA_ITEM_COUNT_MAX = 10
 	}
 
 	private var currentStream: PlayableMediaStream? = null
 	private var subtitleView: SubtitleView? = null
 	private var audioPipeline = ExoPlayerAudioPipeline()
+
+	private val assHandler by lazy {
+		AssHandler(AssRenderType.OVERLAY)
+	}
+
 	private val exoPlayer by lazy {
 		val dataSourceFactory = DefaultDataSource.Factory(
 			context,
@@ -74,7 +84,14 @@ class ExoPlayerBackend(
 			setConstantBitrateSeekingAlwaysEnabled(true)
 		}
 
-		val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+		val mediaSourceFactory = if (exoPlayerOptions.enableLibass) {
+			val assSubtitleParserFactory = AssSubtitleParserFactory(assHandler)
+			val assExtractorsFactory = extractorsFactory.withAssMkvSupport(assSubtitleParserFactory, assHandler)
+			DefaultMediaSourceFactory(dataSourceFactory, assExtractorsFactory).apply {
+				setSubtitleParserFactory(assSubtitleParserFactory)
+			}
+		} else DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+
 		val renderersFactory = DefaultRenderersFactory(context).apply {
 			setEnableDecoderFallback(true)
 			setExtensionRendererMode(
@@ -83,6 +100,9 @@ class ExoPlayerBackend(
 					false -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
 				}
 			)
+		}.let { renderersFactory ->
+			if (exoPlayerOptions.enableLibass) AssRenderersFactory(assHandler, renderersFactory)
+			else renderersFactory
 		}
 
 		ExoPlayer.Builder(context)
@@ -109,6 +129,10 @@ class ExoPlayerBackend(
 				if (exoPlayerOptions.enableDebugLogging) {
 					player.addAnalyticsListener(EventLogger())
 				}
+
+				if (exoPlayerOptions.enableLibass) {
+					assHandler.init(player)
+				}
 			}
 	}
 
@@ -127,9 +151,7 @@ class ExoPlayerBackend(
 		}
 
 		override fun onVideoSizeChanged(size: VideoSize) {
-			if (size != VideoSize.UNKNOWN) {
-				listener?.onVideoSizeChange(size.width, size.height)
-			}
+			listener?.onVideoSizeChange(size.width, size.height)
 		}
 
 		override fun onCues(cueGroup: CueGroup) {
@@ -167,7 +189,11 @@ class ExoPlayerBackend(
 	override fun setSubtitleView(surfaceView: PlayerSubtitleView?) {
 		if (surfaceView != null) {
 			if (subtitleView == null) {
-				subtitleView = SubtitleView(surfaceView.context)
+				subtitleView = SubtitleView(surfaceView.context).apply {
+					if (exoPlayerOptions.enableLibass) {
+						addView(AssSubtitleView(surfaceView.context, assHandler))
+					}
+				}
 			}
 
 			surfaceView.addView(subtitleView)
@@ -185,13 +211,11 @@ class ExoPlayerBackend(
 			setUri(stream.url)
 		}.build()
 
-		// Remove any excessive items from the start
-		while (exoPlayer.mediaItemCount > MEDIA_ITEM_COUNT_MAX - 1) exoPlayer.removeMediaItem(0)
-
-		// Add new item to the end of the media item list
+		// Remove any old preloaded items (skips the first which is the playing item)
+		while (exoPlayer.mediaItemCount > 1) exoPlayer.removeMediaItem(0)
+		// Add new item
 		exoPlayer.addMediaItem(mediaItem)
 
-		// Instruct exoplayer to prepare
 		exoPlayer.prepare()
 	}
 
@@ -201,27 +225,16 @@ class ExoPlayerBackend(
 
 		currentStream = stream
 
-		var preparedItemIndex = (0 until exoPlayer.mediaItemCount).firstOrNull { index ->
-			exoPlayer.getMediaItemAt(index).mediaId == stream.hashCode().toString()
+		var streamIsPrepared = false
+		repeat(exoPlayer.mediaItemCount) { index ->
+			streamIsPrepared =
+				streamIsPrepared || exoPlayer.getMediaItemAt(index).mediaId == stream.hashCode()
+					.toString()
 		}
 
-		// Prepare the item now if it doesn't exist yet
-		if (preparedItemIndex == null) {
-			prepareItem(item)
-			preparedItemIndex = exoPlayer.mediaItemCount - 1
-		}
+		if (!streamIsPrepared) prepareItem(item)
 
-		Timber.i("Playing ${item.mediaStream?.url}")
-
-		// Seek to prepared media item
-		when (preparedItemIndex) {
-			exoPlayer.currentMediaItemIndex - 1 -> exoPlayer.seekToPreviousMediaItem()
-			exoPlayer.currentMediaItemIndex + 1 -> exoPlayer.seekToNextMediaItem()
-			exoPlayer.currentMediaItemIndex -> Unit
-			else -> exoPlayer.seekTo(preparedItemIndex, 0)
-		}
-
-		// Enjoy!
+		exoPlayer.seekToNextMediaItem()
 		exoPlayer.play()
 	}
 
@@ -241,15 +254,11 @@ class ExoPlayerBackend(
 	}
 
 	override fun seekTo(position: Duration) {
-		if (!exoPlayer.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) || !exoPlayer.isCurrentMediaItemSeekable) {
+		if (!exoPlayer.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
 			Timber.w("Trying to seek but ExoPlayer doesn't support it for the current item")
 		}
 
 		exoPlayer.seekTo(position.inWholeMilliseconds)
-	}
-
-	override fun setScrubbing(scrubbing: Boolean) {
-		exoPlayer.isScrubbingModeEnabled = scrubbing
 	}
 
 	override fun setSpeed(speed: Float) {

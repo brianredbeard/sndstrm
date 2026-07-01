@@ -162,12 +162,12 @@ fun CustomPlaybackOverlayFragment.recordProgram(program: BaseItemDto, isSeries: 
 	lifecycleScope.launch {
 		runCatching {
 			withContext(Dispatchers.IO) {
-				val defaultTimer by api.liveTvApi.getDefaultTimer(program.id.toString())
+				val defaultTimer by api.liveTvApi.getDefaultTimer()
 
 				if (isSeries) {
-					api.liveTvApi.createSeriesTimer(defaultTimer)
+					api.liveTvApi.createSeriesTimer(defaultTimer.copy(programId = program.id.toString()))
 				} else {
-					api.liveTvApi.createTimer(defaultTimer.asTimerInfoDto())
+					api.liveTvApi.createTimer(defaultTimer.asTimerInfoDto().copy(programId = program.id.toString()))
 				}
 			}
 		}.fold(

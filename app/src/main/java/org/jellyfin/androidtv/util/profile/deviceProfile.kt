@@ -3,22 +3,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 package org.jellyfin.androidtv.util.profile
 
-import android.content.Context
 import androidx.media3.common.MimeTypes
 import org.jellyfin.androidtv.constant.Codec
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
-import org.jellyfin.sdk.model.ServerVersion
 import org.jellyfin.sdk.model.api.CodecType
 import org.jellyfin.sdk.model.api.DlnaProfileType
 import org.jellyfin.sdk.model.api.EncodingContext
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.ProfileConditionValue
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
-import org.jellyfin.sdk.model.api.VideoRangeType
 import org.jellyfin.sdk.model.deviceprofile.DeviceProfileBuilder
 import org.jellyfin.sdk.model.deviceprofile.buildDeviceProfile
-import kotlin.math.roundToInt
 
 private val downmixSupportedAudioCodecs = arrayOf(
 	Codec.Audio.AAC,
@@ -49,37 +45,31 @@ private val supportedAudioCodecs = arrayOf(
 )
 
 private fun UserPreferences.getMaxBitrate(): Int {
-	var maxBitrate = this[UserPreferences.maxBitrate].toFloatOrNull()
+	var maxBitrate = this[UserPreferences.maxBitrate].toIntOrNull()
 
 	// The value "0" was used in an older release, make sure we prevent that from being used to avoid video not playing
-	if (maxBitrate == null || maxBitrate < 0.01f) maxBitrate = UserPreferences.maxBitrate.defaultValue.toFloat()
+	if (maxBitrate == null || maxBitrate < 1) maxBitrate = UserPreferences.maxBitrate.defaultValue.toInt()
 
 	// Convert megabit to bit
-	return (maxBitrate * 1_000_000).roundToInt()
+	return maxBitrate * 1_000_000
 }
 
-fun createDeviceProfile(
-	context: Context,
-	userPreferences: UserPreferences,
-	serverVersion: ServerVersion,
-) = createDeviceProfile(
-	mediaTest = MediaCodecCapabilitiesTest(context),
+fun createDeviceProfile(userPreferences: UserPreferences, disableDirectPlay: Boolean) = createDeviceProfile(
 	maxBitrate = userPreferences.getMaxBitrate(),
+	disableDirectPlay = disableDirectPlay,
 	isAC3Enabled = userPreferences[UserPreferences.ac3Enabled],
 	downMixAudio = userPreferences[UserPreferences.audioBehaviour] == AudioBehavior.DOWNMIX_TO_STEREO,
-	assDirectPlay = false,
+	assDirectPlay = userPreferences[UserPreferences.assDirectPlay],
 	pgsDirectPlay = userPreferences[UserPreferences.pgsDirectPlay],
-	jellyfinTenEleven = serverVersion >= ServerVersion(10, 11, 0),
 )
 
 fun createDeviceProfile(
-	mediaTest: MediaCodecCapabilitiesTest,
 	maxBitrate: Int,
+	disableDirectPlay: Boolean,
 	isAC3Enabled: Boolean,
 	downMixAudio: Boolean,
 	assDirectPlay: Boolean,
-	pgsDirectPlay: Boolean,
-	jellyfinTenEleven: Boolean,
+	pgsDirectPlay: Boolean
 ) = buildDeviceProfile {
 	val allowedAudioCodecs = when {
 		downMixAudio -> downmixSupportedAudioCodecs
@@ -87,6 +77,7 @@ fun createDeviceProfile(
 		else -> supportedAudioCodecs
 	}
 
+	val mediaTest = MediaCodecCapabilitiesTest()
 	val supportsHevc = mediaTest.supportsHevc()
 	val supportsHevcMain10 = mediaTest.supportsHevcMain10()
 	val hevcMainLevel = mediaTest.getHevcMainLevel()
@@ -97,25 +88,9 @@ fun createDeviceProfile(
 	val avcHigh10Level = mediaTest.getAVCHigh10Level()
 	val supportsAV1 = mediaTest.supportsAV1()
 	val supportsAV1Main10 = mediaTest.supportsAV1Main10()
-	val supportsVC1 = mediaTest.supportsVc1()
 	val maxResolutionAVC = mediaTest.getMaxResolution(MimeTypes.VIDEO_H264)
 	val maxResolutionHevc = mediaTest.getMaxResolution(MimeTypes.VIDEO_H265)
 	val maxResolutionAV1 = mediaTest.getMaxResolution(MimeTypes.VIDEO_AV1)
-	val maxResolutionVC1 = mediaTest.getMaxResolution(MimeTypes.VIDEO_VC1)
-
-	/// HDR capabilities
-
-	// Codecs
-	// AV1
-	val supportsAV1DolbyVision = mediaTest.supportsAV1DolbyVision()
-	val supportsAV1HDR10 = mediaTest.supportsAV1HDR10()
-	val supportsAV1HDR10Plus = mediaTest.supportsAV1HDR10Plus()
-
-	// HEVC
-	val supportsHevcDolbyVision = mediaTest.supportsHevcDolbyVision()
-	val supportsHevcDolbyVisionEL = mediaTest.supportsHevcDolbyVisionEL()
-	val supportsHevcHDR10 = mediaTest.supportsHevcHDR10()
-	val supportsHevcHDR10Plus = mediaTest.supportsHevcHDR10Plus()
 
 	name = "AndroidTV-Default"
 
@@ -146,52 +121,52 @@ fun createDeviceProfile(
 		type = DlnaProfileType.AUDIO
 		context = EncodingContext.STREAMING
 
-		container = Codec.Container.TS
-		protocol = MediaStreamProtocol.HLS
+		container = Codec.Container.MP3
 
-		audioCodec(Codec.Audio.AAC)
+		audioCodec(Codec.Audio.MP3)
 	}
 
 	/// Direct play profiles
-	// Video
-	directPlayProfile {
-		type = DlnaProfileType.VIDEO
+	if (!disableDirectPlay) {
+		// Video
+		directPlayProfile {
+			type = DlnaProfileType.VIDEO
 
-		container(
-			Codec.Container.ASF,
-			Codec.Container.HLS,
-			Codec.Container.M4V,
-			Codec.Container.MKV,
-			Codec.Container.MOV,
-			Codec.Container.MP4,
-			Codec.Container.OGM,
-			Codec.Container.OGV,
-			Codec.Container.TS,
-			Codec.Container.VOB,
-			Codec.Container.WEBM,
-			Codec.Container.WMV,
-			Codec.Container.XVID,
-		)
+			container(
+				Codec.Container.ASF,
+				Codec.Container.HLS,
+				Codec.Container.M4V,
+				Codec.Container.MKV,
+				Codec.Container.MOV,
+				Codec.Container.MP4,
+				Codec.Container.OGM,
+				Codec.Container.OGV,
+				Codec.Container.TS,
+				Codec.Container.VOB,
+				Codec.Container.WEBM,
+				Codec.Container.WMV,
+				Codec.Container.XVID,
+			)
 
-		videoCodec(
-			Codec.Video.AV1,
-			Codec.Video.H264,
-			Codec.Video.HEVC,
-			Codec.Video.MPEG,
-			Codec.Video.MPEG2VIDEO,
-			Codec.Video.VC1,
-			Codec.Video.VP8,
-			Codec.Video.VP9,
-		)
+			videoCodec(
+				Codec.Video.AV1,
+				Codec.Video.H264,
+				Codec.Video.HEVC,
+				Codec.Video.MPEG,
+				Codec.Video.MPEG2VIDEO,
+				Codec.Video.VP8,
+				Codec.Video.VP9,
+			)
 
-		audioCodec(*allowedAudioCodecs)
-	}
+			audioCodec(*allowedAudioCodecs)
+		}
 
-	// Audio
-	directPlayProfile {
-		type = DlnaProfileType.AUDIO
+		// Audio
+		directPlayProfile {
+			type = DlnaProfileType.AUDIO
 
-		audioCodec(*allowedAudioCodecs)
+			audioCodec(*allowedAudioCodecs)
+		}
 	}
 
 	/// Codec profiles
@@ -208,7 +183,7 @@ fun createDeviceProfile(
 					"main",
 					"baseline",
 					"constrained baseline",
-					if (supportsAVCHigh10) "high 10" else null
+					if (supportsAVCHigh10) "main 10" else null
 				)
 			}
 		}
@@ -333,19 +308,6 @@ fun createDeviceProfile(
 		}
 	}
 
-	// VC1 profile
-	codecProfile {
-		type = CodecType.VIDEO
-		codec = Codec.Video.VC1
-
-		conditions {
-			when {
-				!supportsVC1 -> ProfileConditionValue.VIDEO_PROFILE equals "none"
-				else -> ProfileConditionValue.VIDEO_PROFILE notEquals "none"
-			}
-		}
-	}
-
 	// Get max resolutions for common codecs
 	// AVC
 	codecProfile {
@@ -380,99 +342,6 @@ fun createDeviceProfile(
 		}
 	}
 
-	// VC1
-	codecProfile {
-		type = CodecType.VIDEO
-		codec = Codec.Video.VC1
-
-		conditions {
-			ProfileConditionValue.WIDTH lowerThanOrEquals maxResolutionVC1.width
-			ProfileConditionValue.HEIGHT lowerThanOrEquals maxResolutionVC1.height
-		}
-	}
-
-	/// HDR exclude list
-
-	// TODO Use VideoRangeType enum with Jellyfin 10.11 based SDK
-	val unsupportedRangeTypesAv1 = buildSet {
-		if (jellyfinTenEleven) add("DOVIInvalid")
-
-		if (!supportsAV1DolbyVision) {
-			add(VideoRangeType.DOVI.serialName)
-			if (!supportsAV1HDR10) add(VideoRangeType.DOVI_WITH_HDR10.serialName)
-			if (jellyfinTenEleven && !supportsAV1HDR10Plus) add("DOVIWithHDR10Plus")
-		}
-
-		if (!supportsAV1HDR10Plus) {
-			add(VideoRangeType.HDR10_PLUS.serialName)
-
-			if (!mediaTest.supportsAV1HDR10()) add(VideoRangeType.HDR10.serialName)
-		}
-	}
-
-	// TODO Use VideoRangeType enum with Jellyfin 10.11 based SDK
-	val unsupportedRangeTypesHevc = buildSet {
-		if (jellyfinTenEleven) add("DOVIInvalid")
-
-		if (!supportsHevcDolbyVisionEL) {
-			if (jellyfinTenEleven) {
-				add("DOVIWithEL")
-				if (!supportsHevcHDR10Plus && !KnownDefects.hevcDoviHdr10PlusBug) add("DOVIWithELHDR10Plus")
-			}
-
-			if (!supportsHevcDolbyVision) {
-				add(VideoRangeType.DOVI.serialName)
-				if (!supportsHevcHDR10) add(VideoRangeType.DOVI_WITH_HDR10.serialName)
-				if (jellyfinTenEleven && !supportsHevcHDR10Plus && !KnownDefects.hevcDoviHdr10PlusBug) add("DOVIWithHDR10Plus")
-			}
-		}
-
-		if (!supportsHevcHDR10Plus) {
-			add(VideoRangeType.HDR10_PLUS.serialName)
-			if (!supportsHevcHDR10) add(VideoRangeType.HDR10.serialName)
-		}
-
-		if (jellyfinTenEleven && KnownDefects.hevcDoviHdr10PlusBug) {
-			add("DOVIWithHDR10Plus")
-			add("DOVIWithELHDR10Plus")
-		}
-	}
-
-	// Display
-	// Note: The codec profiles use a workaround to create correct behavior
-	// The notEquals condition will always fail the ConditionProcessor test in the server so we use applyConditions to only have the codec
-	// profile be active when the media in question uses one of the unsupported range types. The server will then use the value of the
-	// notEquals in the StreamBuilder to create a correct transcode pipeline
-
-	// Codecs
-	// AV1
-	if (unsupportedRangeTypesAv1.isNotEmpty()) codecProfile {
-		type = CodecType.VIDEO
-		codec = Codec.Video.AV1
-
-		conditions {
-			ProfileConditionValue.VIDEO_RANGE_TYPE notEquals unsupportedRangeTypesAv1.joinToString("|")
-		}
-
-		applyConditions {
-			ProfileConditionValue.VIDEO_RANGE_TYPE inCollection unsupportedRangeTypesAv1
-		}
-	}
-
-	// HEVC
-	if (unsupportedRangeTypesHevc.isNotEmpty()) codecProfile {
-		type = CodecType.VIDEO
-		codec = Codec.Video.HEVC
-
-		conditions {
-			ProfileConditionValue.VIDEO_RANGE_TYPE notEquals unsupportedRangeTypesHevc.joinToString("|")
-		}
-
-		applyConditions {
-			ProfileConditionValue.VIDEO_RANGE_TYPE inCollection unsupportedRangeTypesHevc
-		}
-	}
-
 	// Audio channel profile
 	codecProfile {
 		type = CodecType.VIDEO_AUDIO
@@ -491,6 +360,8 @@ fun createDeviceProfile(
 	subtitleProfile(Codec.Subtitle.SRT, embedded = true, external = true)
 	subtitleProfile(Codec.Subtitle.SUBRIP, embedded = true, external = true)
 	subtitleProfile(Codec.Subtitle.TTML, embedded = true, external = true)
+	subtitleProfile(Codec.Subtitle.MOV_TEXT, embedded = true, external = true)
+	subtitleProfile(Codec.Subtitle.TX3G, embedded = true, external = true)
 
 	// Not all subtitles can be loaded standalone by the player
 	subtitleProfile(Codec.Subtitle.DVBSUB, embedded = true, encode = true)
@@ -499,7 +370,7 @@ fun createDeviceProfile(
 	subtitleProfile(Codec.Subtitle.PGS, embedded = pgsDirectPlay, encode = true)
 	subtitleProfile(Codec.Subtitle.PGSSUB, embedded = pgsDirectPlay, encode = true)
 
-	// ASS/SSA is supported via libass extension
+// ASS/SSA is supported via libass extension
 	subtitleProfile(Codec.Subtitle.ASS, encode = true, embedded = assDirectPlay, external = assDirectPlay)
 	subtitleProfile(Codec.Subtitle.SSA, encode = true, embedded = assDirectPlay, external = assDirectPlay)
 }

@@ -6,6 +6,7 @@ package org.jellyfin.androidtv.ui.preference.screen
 import android.widget.Toast
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.itemdetail.ArchiveHelper
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.action
@@ -15,6 +16,7 @@ import org.koin.android.ext.android.inject
 
 class ThemeSongPreferencesScreen : OptionsFragment() {
 	private val userPreferences: UserPreferences by inject()
+	private val userSettingPreferences: UserSettingPreferences by inject()
 
 	override val screen by optionsScreen {
 		setTitle(R.string.pref_theme_songs)
@@ -24,7 +26,7 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 
 			checkbox {
 				setTitle(R.string.pref_theme_songs_enable)
-				bind(userPreferences, UserPreferences.themeSongsEnabled)
+				bind(userSettingPreferences, userSettingPreferences.themeSongsEnabled)
 			}
 		}
 
@@ -34,22 +36,22 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 			checkbox {
 				setTitle(R.string.pref_theme_song_movies)
 				setContent(R.string.pref_theme_song_movies_summary)
-				bind(userPreferences, UserPreferences.themeSongsMovies)
-				depends { userPreferences[UserPreferences.themeSongsEnabled] }
+				bind(userSettingPreferences, userSettingPreferences.themeSongsMovies)
+				depends { userSettingPreferences[userSettingPreferences.themeSongsEnabled] }
 			}
 
 			checkbox {
 				setTitle(R.string.pref_theme_song_series)
 				setContent(R.string.pref_theme_song_series_summary)
-				bind(userPreferences, UserPreferences.themeSongsSeries)
-				depends { userPreferences[UserPreferences.themeSongsEnabled] }
+				bind(userSettingPreferences, userSettingPreferences.themeSongsSeries)
+				depends { userSettingPreferences[userSettingPreferences.themeSongsEnabled] }
 			}
 
 			checkbox {
 				setTitle(R.string.pref_theme_song_episodes)
 				setContent(R.string.pref_theme_song_episodes_summary)
-				bind(userPreferences, UserPreferences.themeSongsEpisodes)
-				depends { userPreferences[UserPreferences.themeSongsEnabled] }
+				bind(userSettingPreferences, userSettingPreferences.themeSongsEpisodes)
+				depends { userSettingPreferences[userSettingPreferences.themeSongsEnabled] }
 			}
 		}
 
@@ -59,8 +61,8 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 			checkbox {
 				setTitle(R.string.pref_theme_song_archive_fallback)
 				setContent(R.string.pref_theme_song_archive_fallback_summary)
-				bind(userPreferences, UserPreferences.themeSongsArchiveFallback)
-				depends { userPreferences[UserPreferences.themeSongsEnabled] }
+				bind(userSettingPreferences, userSettingPreferences.themeSongsArchiveFallback)
+				depends { userSettingPreferences[userSettingPreferences.themeSongsEnabled] }
 			}
 
 			checkbox {
@@ -68,8 +70,8 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 				setContent(R.string.pref_theme_song_cache_summary)
 				bind(userPreferences, UserPreferences.themeSongsCacheEnabled)
 				depends {
-					userPreferences[UserPreferences.themeSongsEnabled] &&
-						userPreferences[UserPreferences.themeSongsArchiveFallback]
+					userSettingPreferences[userSettingPreferences.themeSongsEnabled] &&
+						userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback]
 				}
 			}
 
@@ -78,8 +80,8 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 				setContent(R.string.pref_theme_song_cache_permanent_summary)
 				bind(userPreferences, UserPreferences.themeSongsCachePermanent)
 				depends {
-					userPreferences[UserPreferences.themeSongsEnabled] &&
-						userPreferences[UserPreferences.themeSongsArchiveFallback] &&
+					userSettingPreferences[userSettingPreferences.themeSongsEnabled] &&
+						userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback] &&
 						userPreferences[UserPreferences.themeSongsCacheEnabled]
 				}
 			}
@@ -88,8 +90,8 @@ class ThemeSongPreferencesScreen : OptionsFragment() {
 				setTitle(R.string.pref_theme_song_clear_cache)
 				setContent(R.string.pref_theme_song_clear_cache_summary)
 				depends {
-					userPreferences[UserPreferences.themeSongsEnabled] &&
-						userPreferences[UserPreferences.themeSongsArchiveFallback] &&
+					userSettingPreferences[userSettingPreferences.themeSongsEnabled] &&
+						userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback] &&
 						userPreferences[UserPreferences.themeSongsCacheEnabled]
 				}
 				onActivate = {

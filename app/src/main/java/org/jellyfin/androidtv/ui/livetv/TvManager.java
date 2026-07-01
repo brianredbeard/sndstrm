@@ -117,7 +117,7 @@ public class TvManager {
             int i = 0;
             for (BaseItemDto channel : allChannels) {
                 channelIds[i++] = channel.getId();
-                if (channel.getId().equals(last)) ndx = i;
+                if (channel.getId().equals(last.toString())) ndx = i;
             }
         }
 
@@ -128,23 +128,29 @@ public class TvManager {
         LocalDateTime startTimeRounded = startTime.withMinute(startTime.getMinute() >= 30 ? 30 : 0).withSecond(0).withNano(0);
         LocalDateTime endTimeRounded = endTime.minusSeconds(1);
 
-        endNdx = endNdx > channelIds.length ? channelIds.length : endNdx+1; //array copy range final ndx is exclusive
+        if (forceReload || needLoadTime == null || startTimeRounded.isAfter(needLoadTime) || !mProgramsDict.containsKey(channelIds[startNdx]) || !mProgramsDict.containsKey(channelIds[endNdx])) {
+            forceReload = false;
 
-        TvManagerHelperKt.getPrograms(fragment, Arrays.copyOfRange(channelIds, startNdx, endNdx), startTimeRounded, endTimeRounded, programs -> {
-            if (programs != null) {
-                Timber.d("*** About to build dictionary");
-                buildProgramsDict(programs, startTime);
-                Timber.d("*** Programs retrieval finished");
+            endNdx = endNdx > channelIds.length ? channelIds.length : endNdx+1; //array copy range final ndx is exclusive
 
-                outerResponse.onResponse();
-            } else {
-                outerResponse.onResponse();
-            }
+            TvManagerHelperKt.getPrograms(fragment, Arrays.copyOfRange(channelIds, startNdx, endNdx), startTimeRounded, endTimeRounded, programs -> {
+                if (programs != null) {
+                    Timber.d("*** About to build dictionary");
+                    buildProgramsDict(programs, startTimeRounded);
+                    Timber.d("*** Programs retrieval finished");
 
-            return null;
-        });
+                    outerResponse.onResponse();
+                } else {
+                    outerResponse.onResponse();
+                }
 
-        Timber.d("*** About to get programs");
+                return null;
+            });
+
+            Timber.d("*** About to get programs");
+        } else {
+            outerResponse.onResponse();
+        }
     }
 
     private static void buildProgramsDict(Collection<BaseItemDto> programs, LocalDateTime startTime) {

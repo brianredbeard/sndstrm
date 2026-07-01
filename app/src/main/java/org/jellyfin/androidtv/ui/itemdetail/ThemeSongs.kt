@@ -11,7 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.auth.repository.SessionRepository
-import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -30,7 +30,7 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 
 	private val api by inject<ApiClient>()
 	private val sessionRepository by inject<SessionRepository>()
-	private val userPreferences by inject<UserPreferences>()
+	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val scope = CoroutineScope(Dispatchers.Main)
 	private var player: MediaPlayer? = null
 	private var activeItemId: UUID? = null
@@ -108,8 +108,8 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 					}
 				}
 
-				if (useArchiveFallback && userPreferences[UserPreferences.themeSongsArchiveFallback]) {
-					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled], userPreferences[UserPreferences.themeSongsCachePermanent])
+				if (useArchiveFallback && userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback]) {
+					val archiveUrl = archiveHelper.getThemeSongUrl(item)
 					if (archiveUrl != null) {
 						scope.launch(Dispatchers.Main) {
 							initializeAndPlay(archiveUrl)
@@ -117,13 +117,13 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 					} else {
 						Timber.d("No theme song found on Archive.org for: ${item.name}")
 					}
-				} else if (!userPreferences[UserPreferences.themeSongsArchiveFallback]) {
+				} else if (!userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback]) {
 				}
 			} catch (e: Exception) {
 				e.printStackTrace()
 				Timber.e(e, "Error getting theme song from Jellyfin for: ${item.name}")
-				if (useArchiveFallback && userPreferences[UserPreferences.themeSongsArchiveFallback]) {
-					val archiveUrl = archiveHelper.getThemeSongUrl(item, userPreferences[UserPreferences.themeSongsCacheEnabled], userPreferences[UserPreferences.themeSongsCachePermanent])
+				if (useArchiveFallback && userSettingPreferences[userSettingPreferences.themeSongsArchiveFallback]) {
+					val archiveUrl = archiveHelper.getThemeSongUrl(item)
 					if (archiveUrl != null) {
 						scope.launch(Dispatchers.Main) {
 							initializeAndPlay(archiveUrl)
@@ -171,20 +171,20 @@ class ThemeSongs(private val context: Context) : KoinComponent {
 	}
 
 	private fun shouldPlayForItem(item: BaseItemDto): Boolean {
-		if (!userPreferences[UserPreferences.themeSongsEnabled]) {
+		if (!userSettingPreferences[userSettingPreferences.themeSongsEnabled]) {
 			return false
 		}
 
 		return when (item.type) {
-			BaseItemKind.MOVIE -> userPreferences[UserPreferences.themeSongsMovies]
-			BaseItemKind.SERIES -> userPreferences[UserPreferences.themeSongsSeries]
-			BaseItemKind.EPISODE -> userPreferences[UserPreferences.themeSongsEpisodes]
+			BaseItemKind.MOVIE -> userSettingPreferences.get(userSettingPreferences.themeSongsMovies)
+			BaseItemKind.SERIES -> userSettingPreferences.get(userSettingPreferences.themeSongsSeries)
+			BaseItemKind.EPISODE -> userSettingPreferences.get(userSettingPreferences.themeSongsEpisodes)
 			else -> false
 		}
 	}
 
 	private fun getUserVolume(): Float =
-		userPreferences[UserPreferences.themeSongsVolume] / 100f
+		userSettingPreferences[userSettingPreferences.themesongvolume] / 100f
 
 	private fun buildStreamUrl(trackId: UUID): String? {
 		val baseUrl = api.baseUrl ?: return null

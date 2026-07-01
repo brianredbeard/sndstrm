@@ -6,198 +6,165 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="29dp">
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_top"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintGuide_begin="180dp"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintGuide_percent="0.35" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_left_end"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_begin="150dp" />
+            app:layout_constraintGuide_begin="27dp" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_main_start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_begin="170dp" />
+            app:layout_constraintGuide_begin="52dp" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_main_end"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_end="240dp" />
+            app:layout_constraintGuide_end="254dp" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_right_start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_end="220dp" />
+            app:layout_constraintGuide_end="235dp" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guide_right_end"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_end="50dp" />
+            app:layout_constraintGuide_end="16dp" />
 
-        <!-- Top -->
         <TextView
             android:id="@+id/fdTitle"
-            android:layout_width="0dp"
+            android:layout_width="700dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="80dp"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-light"
+            android:fontFamily="@font/roboto_bold"
             android:maxLines="2"
-            android:textSize="30sp"
-            app:layout_constraintBottom_toTopOf="@id/fdMainInfoRow"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            android:textAlignment="viewStart"
+            android:textAllCaps="false"
+            android:textColor="@color/basic_button_text"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:typeface="monospace"
+            app:layout_constraintEnd_toStartOf="@+id/guide_main_end"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toTopOf="parent"
             tools:text="fdTitle" />
 
         <LinearLayout
             android:id="@+id/fdMainInfoRow"
             android:layout_width="0dp"
-            android:layout_height="20sp"
+            android:layout_height="25dp"
+            android:layout_marginTop="6dp"
             android:dividerPadding="4sp"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            app:layout_constraintBottom_toTopOf="@id/fdGenreRow"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start" />
+            app:layout_constraintEnd_toStartOf="@+id/guide_right_start"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toBottomOf="@+id/infoTitle1">
 
-        <TextView
-            android:id="@+id/fdGenreRow"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toTopOf="@id/guide_top"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
-            tools:text="fdGenreRow" />
-
-        <!-- Left -->
+        </LinearLayout>
 
         <TextView
             android:id="@+id/infoTitle1"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:textAlignment="viewEnd"
-            android:textAllCaps="true"
+            android:layout_width="700dp"
+            android:layout_height="25dp"
+            android:layout_marginTop="36dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textAlignment="viewStart"
+            android:textColor="@color/basic_button_text"
             android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/guide_top"
-            tools:text="infoTitle1" />
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toBottomOf="@+id/fdTitle"
+            tools:text="Runtime • 2h 30min  •  Rating • 8.5  •  Year • 2023" />
 
         <TextView
-            android:id="@+id/infoValue1"
-            android:layout_width="0dp"
+            android:id="@+id/fdGenreRow"
+            android:layout_width="700dp"
             android:layout_height="wrap_content"
-            android:alpha=".6"
-            android:textAlignment="viewEnd"
+            android:layout_marginTop="12dp"
+            android:shadowColor="#313030"
+            android:textColor="@color/basic_button_text"
             android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/infoTitle1"
-            tools:text="infoValue1" />
-
-        <TextView
-            android:id="@+id/infoTitle2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:textAlignment="viewEnd"
-            android:textAllCaps="true"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/infoValue1"
-            tools:text="infoTitle2" />
-
-        <TextView
-            android:id="@+id/infoValue2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:alpha=".6"
-            android:textAlignment="viewEnd"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/infoTitle2"
-            tools:text="infoValue2" />
-
-        <TextView
-            android:id="@+id/infoTitle3"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:textAlignment="viewEnd"
-            android:textAllCaps="true"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/infoValue2"
-            tools:text="infoTitle3" />
-
-        <TextView
-            android:id="@+id/infoValue3"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:alpha=".6"
-            android:textAlignment="viewEnd"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/guide_left_end"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/infoTitle3"
-            tools:text="infoValue3" />
-
-        <!-- Main -->
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toBottomOf="@+id/fdTitle"
+            tools:text="fdGenreRow" />
 
         <org.jellyfin.androidtv.ui.ExpandableTextView
             android:id="@+id/fdSummaryText"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="592dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="#49504E4E"
             android:ellipsize="end"
             android:fontFamily="sans-serif-light"
-            android:maxLines="6"
+            android:gravity="fill_horizontal"
+            android:justificationMode="inter_word"
+            android:maxLines="4"
+            android:paddingEnd="14dp"
+            android:textAlignment="viewStart"
             android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@id/infoValue3"
-            app:layout_constraintEnd_toEndOf="@id/guide_main_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
-            app:layout_constraintTop_toBottomOf="@id/fdGenreRow"
+            app:layout_constraintEnd_toStartOf="@+id/guide_main_end"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toBottomOf="@+id/fdMainInfoRow"
+            tools:ignore="RtlCompat"
             tools:text="fdSummaryText" />
 
         <LinearLayout
             android:id="@+id/fdButtonRow"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_width="923dp"
+            android:layout_height="107dp"
+            android:layout_marginTop="36dp"
+            android:descendantFocusability="afterDescendants"
             android:divider="@drawable/blank10x10"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
             android:orientation="horizontal"
             android:showDividers="none"
-            app:layout_constraintEnd_toEndOf="@id/guide_main_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
-            app:layout_constraintTop_toBottomOf="@id/fdSummaryText" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/guide_left_end"
+            app:layout_constraintTop_toBottomOf="@+id/fdSummaryText">
 
-        <!-- Right -->
+        </LinearLayout>
 
         <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="@id/fdButtonRow"
+            android:id="@+id/frameLayout"
+            android:layout_width="181dp"
+            android:layout_height="wrap_content"
+            android:minWidth="320dp"
+            android:minHeight="180dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="16:9"
             app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_right_start"
-            app:layout_constraintTop_toTopOf="@id/guide_top"
-            app:layout_constraintVertical_bias="0">
+            app:layout_constraintHorizontal_bias="0.702"
+            app:layout_constraintStart_toStartOf="@+id/guide_main_end"
+            app:layout_constraintTop_toTopOf="@+id/guide_top"
+            app:layout_constraintVertical_bias="0.0">
 
             <org.jellyfin.androidtv.ui.AsyncImageView
                 android:id="@+id/mainImage"
@@ -205,8 +172,13 @@
                 android:layout_height="wrap_content"
                 android:adjustViewBounds="true"
                 android:background="@drawable/shape_card"
-                android:scaleType="centerInside"
+                android:scaleType="fitXY"
+                tools:layout_editor_absoluteX="746dp"
+                tools:layout_editor_absoluteY="186dp"
                 tools:srcCompat="@drawable/app_banner" />
+
         </FrameLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 </RelativeLayout>

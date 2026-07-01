@@ -32,8 +32,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import timber.log.Timber;
-
 public class BrowseViewFragment extends EnhancedBrowseFragment {
     private boolean isLiveTvLibrary;
 
@@ -180,7 +178,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
 
                     return null;
                 }, exception -> {
-                    Timber.e(exception, "Failed to get Live TV recordings / timers");
+                    Utils.showToast(getContext(), exception.getLocalizedMessage());
                     return null;
                 });
 

@@ -17,9 +17,9 @@ class AppNotificationPresenter : Presenter() {
 
 	override fun onBindViewHolder(viewHolder: ViewHolder, item: Any?) {
 		viewHolder as AppNotificationViewHolder
-		item as AppNotification
-
-		viewHolder.binding.message.text = item.message
+		(item as? AppNotification)?.let { notification ->
+			viewHolder.binding.message.text = notification.message
+		}
 	}
 
 	override fun onUnbindViewHolder(viewHolder: ViewHolder) {

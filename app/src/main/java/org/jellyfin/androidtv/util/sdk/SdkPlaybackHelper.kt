@@ -27,9 +27,9 @@ import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
+import org.jellyfin.sdk.model.extensions.inWholeTicks
 import org.jellyfin.sdk.model.extensions.ticks
 import java.util.UUID
 import kotlin.time.Duration
@@ -92,30 +92,7 @@ class SdkPlaybackHelper(
 				}
 			}
 
-			BaseItemKind.SERIES -> {
-				val response by api.tvShowsApi.getEpisodes(
-					seriesId = mainItem.id,
-					isMissing = false,
-					sortBy = if (shuffle) ItemSortBy.RANDOM else ItemSortBy.SORT_NAME,
-					limit = ITEM_QUERY_LIMIT,
-					fields = ItemRepository.itemFields,
-				)
-				response.items
-			}
-
-			BaseItemKind.SEASON -> {
-				val response by api.tvShowsApi.getEpisodes(
-					seriesId = requireNotNull(mainItem.seriesId),
-					seasonId = mainItem.id,
-					isMissing = false,
-					sortBy = if (shuffle) ItemSortBy.RANDOM else ItemSortBy.SORT_NAME,
-					limit = ITEM_QUERY_LIMIT,
-					fields = ItemRepository.itemFields,
-				)
-				response.items
-			}
-
-			BaseItemKind.FOLDER -> {
+			BaseItemKind.SERIES, BaseItemKind.SEASON, BaseItemKind.BOX_SET, BaseItemKind.FOLDER -> {
 				val response by api.itemsApi.getItems(
 					parentId = mainItem.id,
 					isMissing = false,
@@ -133,33 +110,12 @@ class SdkPlaybackHelper(
 				response.items
 			}
 
-			BaseItemKind.BOX_SET -> {
-				val response by api.itemsApi.getItems(
-					parentId = mainItem.id,
-					isMissing = false,
-					includeItemTypes = listOf(
-						BaseItemKind.EPISODE,
-						BaseItemKind.MOVIE,
-						BaseItemKind.VIDEO
-					),
-					sortBy = if (shuffle) listOf(ItemSortBy.RANDOM) else null,
-					recursive = true,
-					limit = ITEM_QUERY_LIMIT,
-					fields = ItemRepository.itemFields
-				)
-
-				response.items
-			}
-
 			BaseItemKind.MUSIC_ALBUM -> {
 				val response by api.itemsApi.getItems(
 					isMissing = false,
 					mediaTypes = listOf(MediaType.AUDIO),
-					filters = listOf(ItemFilter.IS_NOT_FOLDER),
-					sortBy = if (shuffle) listOf(ItemSortBy.RANDOM) else listOf(
-						ItemSortBy.ALBUM,
-						ItemSortBy.PARENT_INDEX_NUMBER,
-						ItemSortBy.INDEX_NUMBER,
+					sortBy = listOf(
+						ItemSortBy.ALBUM_ARTIST,
 						ItemSortBy.SORT_NAME
 					),
 					recursive = true,
@@ -175,13 +131,7 @@ class SdkPlaybackHelper(
 				val response by api.itemsApi.getItems(
 					isMissing = false,
 					mediaTypes = listOf(MediaType.AUDIO),
-					filters = listOf(ItemFilter.IS_NOT_FOLDER),
-					sortBy = if (shuffle) listOf(ItemSortBy.RANDOM) else listOf(
-						ItemSortBy.ALBUM,
-						ItemSortBy.PARENT_INDEX_NUMBER,
-						ItemSortBy.INDEX_NUMBER,
-						ItemSortBy.SORT_NAME
-					),
+					sortBy = listOf(ItemSortBy.SORT_NAME),
 					recursive = true,
 					limit = ITEM_QUERY_LIMIT,
 					fields = ItemRepository.itemFields,

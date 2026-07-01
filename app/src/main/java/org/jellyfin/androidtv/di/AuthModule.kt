@@ -22,16 +22,19 @@ val authModule = module {
 	single { AuthenticationPreferences(get()) }
 
 	single<AuthenticationRepository> {
-		AuthenticationRepositoryImpl(get(), get(), get(), get(), get(), get(defaultDeviceInfo))
+		AuthenticationRepositoryImpl(
+			jellyfin = get(),
+			sessionRepository = get(),
+			authenticationStore = get(),
+			userApiClient = get(),
+		authenticationPreferences = get(),
+			defaultDeviceInfo = get(defaultDeviceInfo),
+			imageHelper = get()
+		)
 	}
 	single<ServerRepository> { ServerRepositoryImpl(get(), get()) }
 	single<ServerUserRepository> { ServerUserRepositoryImpl(get(), get()) }
 	single<SessionRepository> {
 		SessionRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get(), get())
-	}
-
-	factory {
-		val serverRepository = get<ServerRepository>()
-		serverRepository.currentServer.value?.serverVersion ?: ServerRepository.minimumServerVersion
 	}
 }

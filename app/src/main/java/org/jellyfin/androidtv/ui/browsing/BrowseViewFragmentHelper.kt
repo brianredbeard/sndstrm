@@ -5,7 +5,6 @@ package org.jellyfin.androidtv.ui.browsing
 
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.data.repository.ItemRepository
@@ -29,7 +28,7 @@ fun EnhancedBrowseFragment.getLiveTvRecordingsAndTimers(
 
 	lifecycleScope.launch {
 		runCatching {
-			val recordings = async(Dispatchers.IO) {
+			val recordings = withContext(Dispatchers.IO) {
 				api.liveTvApi.getRecordings(
 					fields = ItemRepository.itemFields,
 					enableImages = true,
@@ -37,11 +36,9 @@ fun EnhancedBrowseFragment.getLiveTvRecordingsAndTimers(
 				).content
 			}
 
-			val timers = async(Dispatchers.IO) {
-				api.liveTvApi.getTimers().content
-			}
+			val timers by api.liveTvApi.getTimers()
 
-			recordings.await() to timers.await()
+			recordings to timers
 		}.fold(
 			onSuccess = { (recordings, timers) -> callback(recordings, timers) },
 			onFailure = { exception -> errorCallback(exception) }

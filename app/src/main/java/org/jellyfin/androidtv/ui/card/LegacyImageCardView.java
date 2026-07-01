@@ -3,18 +3,22 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 package org.jellyfin.androidtv.ui.card;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
+import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.leanback.widget.BaseCardView;
 
 import org.jellyfin.androidtv.R;
@@ -28,25 +32,91 @@ import org.jellyfin.androidtv.util.Utils;
 
 import java.text.NumberFormat;
 
+import timber.log.Timber;
+
 /**
  * Modified ImageCard with no fade on the badge
  * A card view with an {@link ImageView} as its main region.
  */
-public class LegacyImageCardView extends BaseCardView {
+public class LegacyImageCardView extends BaseCardView implements androidx.lifecycle.LifecycleObserver {
     private ViewCardLegacyImageBinding binding = ViewCardLegacyImageBinding.inflate(LayoutInflater.from(getContext()), this);
     private ImageView mBanner;
     private int BANNER_SIZE = Utils.convertDpToPixel(getContext(), 50);
     private int noIconMargin = Utils.convertDpToPixel(getContext(), 5);
     private NumberFormat nf = NumberFormat.getInstance();
 
+    private float defaultScale = 1.0f;
+    private float focusScale = 1.0f;
+
+    @Override
+    protected void onFinishInflate() {
+        super.onFinishInflate();
+
+        // Load scale values from resources
+
+        // Apply default scale
+        setScaleX(defaultScale);
+        setScaleY(defaultScale);
+
+        // Ensure no elevation is set after inflation
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            setElevation(0);
+            setTranslationZ(0);
+            setStateListAnimator(null);
+        }
+    }
+
+    public LegacyImageCardView(Context context) {
+        this(context, null);
+    }
+
+    public LegacyImageCardView(Context context, AttributeSet attrs) {
+        this(context, attrs, androidx.leanback.R.attr.imageCardViewStyle);
+    }
+
+    public LegacyImageCardView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+
+        // Initialize with default showInfo = true
+        initializeCard(context, true);
+    }
+
     public LegacyImageCardView(Context context, boolean showInfo) {
         super(context, null, androidx.leanback.R.attr.imageCardViewStyle);
+
+        initializeCard(context, showInfo);
+    }
+
+    private void initializeCard(Context context, boolean showInfo) {
+        // Completely disable all elevation animations
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            // Create a custom StateListAnimator that does nothing
+            android.animation.StateListAnimator stateListAnimator = new android.animation.StateListAnimator();
+
+            // Add a default state with no animation
+            stateListAnimator.addState(new int[0], android.animation.AnimatorInflater.loadAnimator(context, android.R.animator.fade_in));
+
+            // Apply the custom StateListAnimator
+            setStateListAnimator(stateListAnimator);
+
+            // Explicitly set elevation to 0
+            setElevation(0);
+            setTranslationZ(0);
+
+            // Disable outline provider
+            setOutlineProvider(null);
+        }
+
+        // Also set important for accessibility to false to prevent any elevation changes
+        setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        // Disable clip to padding and clip children to prevent any clipping issues
+        setClipToPadding(false);
+        setClipChildren(false);
 
         if (!showInfo) {
             setCardType(CARD_TYPE_MAIN_ONLY);
         }
-
-        binding.mainImage.setClipToOutline(true);
 
         // "hack" to trigger KeyProcessor to open the menu for this item on long press
         setOnLongClickListener(v -> {
@@ -58,6 +128,157 @@ public class LegacyImageCardView extends BaseCardView {
         });
 
         setForeground(null);
+
+        // Add focus/selection listener for border
+        setOnFocusChangeListener((v, hasFocus) -> {
+            Timber.d("Focus changed: %s", hasFocus);
+            updateCardBorder();
+        });
+        setFocusable(true);
+        setFocusableInTouchMode(true);
+
+        // Set click listener for selection (if needed)
+        setOnClickListener(v -> {
+            setSelected(!isSelected());
+            Timber.d("Clicked, selected: %s", isSelected());
+            updateCardBorder();
+        });
+    }
+
+    private boolean isFocusedState = false;
+
+    @SuppressLint({"NewApi", "WrongConstant"})
+    private void updateCardBorder() {
+        // Always show white borders when focused or selected
+        boolean shouldShowBorder = isFocused() || isSelected();
+
+        Timber.d("Card border state - focused: %s, selected: %s, showing border: %s",
+                isFocused(), isSelected(), shouldShowBorder);
+
+        // Skip if state hasn't changed
+        if (isFocusedState == shouldShowBorder) return;
+        isFocusedState = shouldShowBorder;
+
+        if (shouldShowBorder) {
+            // Apply border to the main image view with proper insets
+            Drawable border = ContextCompat.getDrawable(getContext(), R.drawable.card_focused_border);
+            int padding = (int) getContext().getResources().getDimension(R.dimen.card_border_padding);
+
+            // Set the border as the foreground of the main image
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                binding.mainImage.setForeground(border);
+            } else {
+                // For API < 23, use a different approach with padding and background
+                binding.mainImage.setPadding(padding, padding, padding, padding);
+                binding.mainImage.setBackground(border);
+            }
+        } else {
+            // Remove border
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                binding.mainImage.setForeground(null);
+            } else {
+                binding.mainImage.setPadding(0, 0, 0, 0);
+                binding.mainImage.setBackground(null);
+            }
+        }
+
+        // Invalidate the view to ensure the border is redrawn
+        binding.mainImage.invalidate();
+    }
+
+    @Override
+    protected void onFocusChanged(boolean gainFocus, int direction, android.graphics.Rect previouslyFocusedRect) {
+        // Apply scale based on focus
+        if (gainFocus) {
+            animate().scaleX(focusScale).scaleY(focusScale).setDuration(150).start();
+        } else {
+            animate().scaleX(defaultScale).scaleY(defaultScale).setDuration(150).start();
+        }
+
+        // Store current elevation
+        float currentElevation = getElevation();
+
+        // Call super
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+
+        // Restore elevation to 0 and update border
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            setElevation(0);
+            setTranslationZ(0);
+        }
+
+        updateCardBorder();
+    }
+
+    @Override
+    public void setSelected(boolean selected) {
+        // Store current state
+        boolean wasSelected = isSelected();
+
+        // Call super
+        super.setSelected(selected);
+
+        // Only update the border if the selection state actually changed
+        if (wasSelected != selected) {
+            updateCardBorder();
+        }
+
+        // Ensure no elevation is set and no animations are running
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            // Clear any running animations
+            clearAnimation();
+
+            // Reset elevation and translation
+            setElevation(0);
+            setTranslationZ(0);
+
+            // Ensure no outline provider is set
+            setOutlineProvider(null);
+
+            // Force a redraw
+            invalidateOutline();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+
+        // Reset scale to default when reattached
+        setScaleX(defaultScale);
+        setScaleY(defaultScale);
+
+        // Disable elevation in parent if it's a view group
+        ViewParent parent = getParent();
+        if (parent instanceof ViewGroup) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                ((ViewGroup) parent).setClipToPadding(false);
+                ((ViewGroup) parent).setClipChildren(false);
+                ((ViewGroup) parent).setElevation(0);
+                ((ViewGroup) parent).setTranslationZ(0);
+                ((ViewGroup) parent).setStateListAnimator(null);
+            }
+        }
+
+        // Ensure no outline provider is set
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            setOutlineProvider(null);
+            invalidateOutline();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        // Reset scale when detached to prevent animation issues
+        setScaleX(1.0f);
+        setScaleY(1.0f);
+        super.onDetachedFromWindow();
+    }
+
+    @androidx.lifecycle.OnLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_RESUME)
+    public void onResume() {
+        // Update border state when preferences might have changed
+        updateCardBorder();
     }
 
     public void setBanner(int bannerResource) {
@@ -100,6 +321,11 @@ public class LegacyImageCardView extends BaseCardView {
         ViewGroup.LayoutParams lp2 = binding.resumeProgress.getLayoutParams();
         lp2.width = lp.width;
         binding.resumeProgress.setLayoutParams(lp2);
+
+        // Ensure the outline provider is updated with the new dimensions
+        if (binding.mainImage.getOutlineProvider() != null) {
+            binding.mainImage.invalidateOutline();
+        }
     }
 
     public void setTitleText(CharSequence text) {
@@ -260,5 +486,23 @@ public class LegacyImageCardView extends BaseCardView {
 
     public void showFavIcon(boolean show) {
         binding.favIcon.setVisibility(show ? VISIBLE : GONE);
+    }
+
+    public void setResolutionIndicator(String resolution) {
+        if (resolution != null && !resolution.isEmpty()) {
+            binding.resolutionText.setText(resolution);
+            binding.resolutionIndicator.setVisibility(VISIBLE);
+        } else {
+            binding.resolutionIndicator.setVisibility(GONE);
+        }
+    }
+
+    public void setAudioCodecIndicator(String codec) {
+        if (codec != null && !codec.isEmpty()) {
+            binding.audioCodecText.setText(codec);
+            binding.audioCodecIndicator.setVisibility(VISIBLE);
+        } else {
+            binding.audioCodecIndicator.setVisibility(GONE);
+        }
     }
 }

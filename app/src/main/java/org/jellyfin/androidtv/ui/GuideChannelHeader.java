@@ -59,7 +59,7 @@ public class GuideChannelHeader extends RelativeLayout {
     public void loadImage() {
         ImageHelper imageHelper = KoinJavaComponent.<ImageHelper>get(ImageHelper.class);
         mChannelImage.load(
-                imageHelper.getPrimaryImageUrl(mChannel,null, ImageHelper.MAX_PRIMARY_IMAGE_HEIGHT),
+                imageHelper.getPrimaryImageUrl(mChannel, null, null),
                 null,
                 null,
                 0.0,
@@ -82,8 +82,7 @@ public class GuideChannelHeader extends RelativeLayout {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
 
         if (gainFocus) {
-            setBackgroundColor(Utils.getThemeColor(mContext, android.R.attr.colorAccent));
-
+            setBackgroundResource(R.drawable.channel_guide_focused_background);
             mTvGuide.setSelectedProgram(this);
         } else {
             setBackground(ContextCompat.getDrawable(mContext, R.drawable.light_border));

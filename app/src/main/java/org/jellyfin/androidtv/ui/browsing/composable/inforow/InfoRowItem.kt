@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 package org.jellyfin.androidtv.ui.browsing.composable.inforow
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -15,13 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jellyfin.androidtv.ui.base.Icon
-import org.jellyfin.androidtv.ui.base.LocalTextStyle
 import org.jellyfin.androidtv.ui.base.ProvideTextStyle
 
 /**
@@ -30,11 +29,13 @@ import org.jellyfin.androidtv.ui.base.ProvideTextStyle
 @Composable
 fun InfoRowItem(
 	// Icon options
-	icon: ImageVector? = null,
-	iconTint: Color? = null,
+	icon: Painter? = null,
 	contentDescription: String?,
 	// Styling
 	colors: Pair<Color, Color> = InfoRowColors.Transparent,
+	backgroundCornerRadius: androidx.compose.ui.unit.Dp = 1.dp,
+	horizontalPadding: androidx.compose.ui.unit.Dp = 1.dp,
+	textSize: androidx.compose.ui.unit.TextUnit = 10.sp,
 	// Content
 	content: @Composable RowScope.() -> Unit,
 ) {
@@ -42,8 +43,8 @@ fun InfoRowItem(
 
 	val modifier = when {
 		backgroundColor.alpha > 0f -> Modifier
-			.background(backgroundColor, RoundedCornerShape(3.dp))
-			.padding(horizontal = 5.dp)
+			.background(backgroundColor, RoundedCornerShape(backgroundCornerRadius))
+			.padding(horizontal = horizontalPadding)
 
 		else -> Modifier
 	}
@@ -51,8 +52,8 @@ fun InfoRowItem(
 	ProvideTextStyle(
 		value = TextStyle(
 			color = foregroundColor,
-			fontSize = if (backgroundColor.alpha > 0f) 12.sp else 16.sp,
-			fontWeight = if (backgroundColor.alpha > 0f) FontWeight.W600 else FontWeight.W500,
+			fontSize = if (backgroundColor.alpha > 0f) textSize else 14.sp,
+			fontWeight = FontWeight.SemiBold,
 		)
 	) {
 		Row(
@@ -61,13 +62,12 @@ fun InfoRowItem(
 			modifier = modifier.fillMaxHeight(),
 		) {
 			if (icon != null) {
-				Icon(
-					imageVector = icon,
-					contentDescription = contentDescription,
-					modifier = Modifier.size(if (backgroundColor.alpha > 0f) 16.dp else 18.dp),
-					tint = iconTint ?: LocalTextStyle.current.color,
-				)
-			}
+                Image(
+                    painter = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
 
 			content()
 		}

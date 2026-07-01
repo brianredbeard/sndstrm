@@ -93,12 +93,22 @@ class LeanbackChannelWorker(
 		!isSupported -> Result.failure()
 		// Retry later if no authenticated user is found
 		!api.isUsable -> Result.retry()
+		// Check if launcher channels are enabled
+		!userPreferences[UserPreferences.launcherChannelsEnabled] -> {
+			// Delete all existing channels and programs when disabled
+			context.contentResolver.delete(TvContractCompat.PreviewPrograms.CONTENT_URI, null, null)
+			context.contentResolver.delete(TvContractCompat.Channels.CONTENT_URI, null, null)
+			Result.success()
+		}
 		else -> try {
 			// Get next up episodes
 			val (resumeItems, nextUpItems) = getNextUpItems()
 			// Get latest media
 			val (latestEpisodes, latestMovies, latestMedia) = getLatestMedia()
 			val myMedia = getMyMedia()
+			val movies = getMovies()
+			val movieCollections = getMovieCollections()
+			val shows = getShows()
 			// Delete current items from the channels
 			context.contentResolver.delete(TvContractCompat.PreviewPrograms.CONTENT_URI, null, null)
 
@@ -128,7 +138,7 @@ class LeanbackChannelWorker(
 			val latestMoviesChannel = getChannelUri(
 				"latest_movies", Channel.Builder()
 					.setType(TvContractCompat.Channels.TYPE_PREVIEW)
-					.setDisplayName(context.getString(R.string.lbl_movies))
+					.setDisplayName(context.getString(R.string.lbl_new)+" "+context.getString(R.string.lbl_movies))
 					.setAppLinkIntent(Intent(context, StartupActivity::class.java))
 					.build()
 			)
@@ -139,7 +149,30 @@ class LeanbackChannelWorker(
 					.setAppLinkIntent(Intent(context, StartupActivity::class.java))
 					.build()
 			)
+			val moviesChannel = getChannelUri(
+				"movies", Channel.Builder()
+					.setType(TvContractCompat.Channels.TYPE_PREVIEW)
+					.setDisplayName(context.getString(R.string.lbl_movies))
+					.setAppLinkIntent(Intent(context, StartupActivity::class.java))
+					.build()
+			)
+			val movieCollectionsChannel = getChannelUri(
+				"movie_collections", Channel.Builder()
+					.setType(TvContractCompat.Channels.TYPE_PREVIEW)
+					.setDisplayName(context.getString(R.string.lbl_collections))
+					.setAppLinkIntent(Intent(context, StartupActivity::class.java))
+					.build()
+			)
+			val showsChannel = getChannelUri(
+				"shows", Channel.Builder()
+					.setType(TvContractCompat.Channels.TYPE_PREVIEW)
+					.setDisplayName(context.getString(R.string.lbl_series))
+					.setAppLinkIntent(Intent(context, StartupActivity::class.java))
+					.build()
+			)
 			val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
+			val preferLauncherThumb = userPreferences[UserPreferences.launcherThumbnailsEnabled]
+
 
 			// Add new items
 			arrayOf(
@@ -148,6 +181,9 @@ class LeanbackChannelWorker(
 				latestMovies to latestMoviesChannel,
 				latestEpisodes to latestEpisodesChannel,
 				myMedia to myMediaChannel,
+				movies to moviesChannel,
+				movieCollections to movieCollectionsChannel,
+				shows to showsChannel
 			).forEach { (items, channel) ->
 				if (channel == null) {
 					Timber.e("Skipping channel because it was not available")
@@ -156,7 +192,8 @@ class LeanbackChannelWorker(
 						createPreviewProgram(
 							channel,
 							item,
-							preferParentThumb
+							preferParentThumb,
+							preferLauncherThumb
 						)
 					}.let {
 						context.contentResolver.bulkInsert(
@@ -166,7 +203,7 @@ class LeanbackChannelWorker(
 					}
 				}
 			}
-			updateWatchNext(resumeItems + nextUpItems)
+			updateWatchNext(resumeItems + nextUpItems, preferLauncherThumb)
 
 			// Success!
 			Result.success()
@@ -248,13 +285,27 @@ class LeanbackChannelWorker(
 	 * image when preferred.
 	 */
 	private fun BaseItemDto.getPosterArtImageUrl(
-		preferParentThumb: Boolean
-	): Uri = when {
-		type == BaseItemKind.MOVIE || type == BaseItemKind.SERIES -> itemImages[ImageType.PRIMARY]
-		(preferParentThumb || !itemImages.contains(ImageType.PRIMARY)) && parentImages.contains(ImageType.THUMB) -> parentImages[ImageType.THUMB]
-		else -> itemImages[ImageType.PRIMARY]
-	}.let { image ->
-		ImageProvider.getImageUri(image?.getUrl(api) ?: imageHelper.getResourceUrl(context, R.drawable.tile_land_tv))
+		preferParentThumb: Boolean,
+		preferLauncherThumb: Boolean
+	): Uri {
+		val image = when (type) {
+			BaseItemKind.EPISODE -> {
+				if ((preferParentThumb || !itemImages.contains(ImageType.PRIMARY)) && parentImages.contains(ImageType.THUMB)) {
+					parentImages[ImageType.THUMB]
+				} else {
+					itemImages[ImageType.PRIMARY]
+				}
+			}
+			BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.BOX_SET -> {
+				if (preferLauncherThumb) {
+					itemImages[ImageType.THUMB] ?: itemImages[ImageType.PRIMARY]
+				} else {
+					itemImages[ImageType.PRIMARY] ?: itemImages[ImageType.THUMB]
+				}
+			}
+			else -> itemImages[ImageType.PRIMARY]
+		}
+		return ImageProvider.getImageUri(image?.getUrl(api) ?: imageHelper.getResourceUrl(context, R.drawable.tile_land_tv))
 	}
 
 	/**
@@ -321,13 +372,56 @@ class LeanbackChannelWorker(
 			Triple(latestEpisodes.await(), latestMovies.await(), latestMedia.await())
 		}
 
+	private suspend fun getMovies(): List<BaseItemDto> =
+		withContext(Dispatchers.IO) {
+			try {
+				api.itemsApi.getItems(
+					includeItemTypes = listOf(BaseItemKind.MOVIE),
+					recursive = true,
+					fields = ItemRepository.itemFields
+				).content.items
+			} catch (e: Exception) {
+				Timber.e(e, "Error getting movies")
+				emptyList()
+			}
+		}
+
+	private suspend fun getMovieCollections(): List<BaseItemDto> =
+		withContext(Dispatchers.IO) {
+			try {
+				api.itemsApi.getItems(
+					includeItemTypes = listOf(BaseItemKind.BOX_SET),
+					recursive = true,
+					fields = ItemRepository.itemFields
+				).content.items
+			} catch (e: Exception) {
+				Timber.e(e, "Error getting collections")
+				emptyList()
+			}
+		}
+
+	private suspend fun getShows(): List<BaseItemDto> =
+		withContext(Dispatchers.IO) {
+			try {
+				api.itemsApi.getItems(
+					includeItemTypes = listOf(BaseItemKind.SERIES),
+					recursive = true,
+					fields = ItemRepository.itemFields
+				).content.items
+			} catch (e: Exception) {
+				Timber.e(e, "Error getting shows")
+				emptyList()
+			}
+		}
+
 	@SuppressLint("RestrictedApi")
 	private fun createPreviewProgram(
 		channelUri: Uri,
 		item: BaseItemDto,
-		preferParentThumb: Boolean
+		preferParentThumb: Boolean,
+		preferLauncherThumb: Boolean
 	): ContentValues {
-		val imageUri = item.getPosterArtImageUrl(preferParentThumb)
+		val imageUri = item.getPosterArtImageUrl(preferParentThumb, preferLauncherThumb)
 		val seasonString = item.parentIndexNumber?.toString().orEmpty()
 
 		val episodeString = when {
@@ -358,16 +452,32 @@ class LeanbackChannelWorker(
 			)
 			.setPosterArtUri(imageUri)
 			.setPosterArtAspectRatio(
-				when (item.type) {
-					BaseItemKind.COLLECTION_FOLDER,
-					BaseItemKind.EPISODE -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
-
-					else -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_MOVIE_POSTER
+				if (preferLauncherThumb) {
+					TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
+				} else {
+					when (item.type) {
+						BaseItemKind.EPISODE, BaseItemKind.COLLECTION_FOLDER ->
+							TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
+						else ->
+							TvContractCompat.PreviewPrograms.ASPECT_RATIO_MOVIE_POSTER
+					}
 				}
 			)
 			.setIntent(Intent(context, StartupActivity::class.java).apply {
 				putExtra(StartupActivity.EXTRA_ITEM_ID, item.id.toString())
-				putExtra(StartupActivity.EXTRA_ITEM_IS_USER_VIEW, item.type == BaseItemKind.COLLECTION_FOLDER)
+				when (item.type) {
+					BaseItemKind.COLLECTION_FOLDER -> {
+						putExtra(StartupActivity.EXTRA_ITEM_IS_USER_VIEW, true)
+						putExtra("ItemType", "COLLECTION_FOLDER")
+					}
+					BaseItemKind.BOX_SET -> {
+						putExtra(StartupActivity.EXTRA_ITEM_IS_USER_VIEW, false)
+						putExtra("ItemType", "BOX_SET")
+					}
+					else -> {
+						putExtra(StartupActivity.EXTRA_ITEM_IS_USER_VIEW, false)
+					}
+				}
 			})
 			.setDurationMillis(
 				if (item.runTimeTicks?.ticks != null) {
@@ -393,7 +503,7 @@ class LeanbackChannelWorker(
 	 * NextUpQuery().
 	 */
 	@SuppressLint("RestrictedApi")
-	private fun updateWatchNext(nextUpItems: List<BaseItemDto>) {
+	private fun updateWatchNext(nextUpItems: List<BaseItemDto>, preferLauncherThumb: Boolean) {
 		deletePrograms(nextUpItems)
 
 		// Get current watch next state
@@ -404,7 +514,7 @@ class LeanbackChannelWorker(
 			.filter { next -> currentWatchNextPrograms.none { it.internalProviderId == next.id.toString() } }
 		context.contentResolver.bulkInsert(
 			WatchNextPrograms.CONTENT_URI,
-			programsToAdd.map { item -> getBaseItemAsWatchNextProgram(item).toContentValues() }
+			programsToAdd.map { item -> getBaseItemAsWatchNextProgram(item, preferLauncherThumb).toContentValues() }
 				.toTypedArray())
 	}
 
@@ -449,7 +559,7 @@ class LeanbackChannelWorker(
 	 * Convert [BaseItemDto] to [WatchNextProgram]. Assumes the item type is "episode".
 	 */
 	@Suppress("RestrictedApi")
-	private fun getBaseItemAsWatchNextProgram(item: BaseItemDto) =
+	private fun getBaseItemAsWatchNextProgram(item: BaseItemDto, preferLauncherThumb: Boolean) =
 		WatchNextProgram.Builder().apply {
 			val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
 
@@ -461,7 +571,10 @@ class LeanbackChannelWorker(
 				setPosterArtAspectRatio(WatchNextPrograms.ASPECT_RATIO_16_9)
 			} else if (item.type == BaseItemKind.MOVIE) {
 				setType(WatchNextPrograms.TYPE_MOVIE)
-				setPosterArtAspectRatio(WatchNextPrograms.ASPECT_RATIO_MOVIE_POSTER)
+				setPosterArtAspectRatio(
+					if (preferLauncherThumb) WatchNextPrograms.ASPECT_RATIO_16_9
+					else WatchNextPrograms.ASPECT_RATIO_MOVIE_POSTER
+				)
 			}
 
 			// Name and episode details
@@ -478,7 +591,7 @@ class LeanbackChannelWorker(
 			setDescription(item.overview?.stripHtml())
 
 			// Poster
-			setPosterArtUri(item.getPosterArtImageUrl(preferParentThumb))
+			setPosterArtUri(item.getPosterArtImageUrl(preferParentThumb, preferLauncherThumb))
 
 			when {
 				// User has started playing the episode
