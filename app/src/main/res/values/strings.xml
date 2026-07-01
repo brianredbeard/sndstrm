@@ -435,6 +435,7 @@
     <string name="server_issue_ssl_handshake">SSL handshake failed</string>
     <string name="pref_customization">Customization</string>
     <string name="sort_accounts_by">Sort accounts by</string>
+    <string name="profile_picture">Profile picture</string>
     <string name="pref_accounts">Accounts</string>
     <string name="pref_behavior">Behavior</string>
     <string name="pref_browsing">Browsing</string>
